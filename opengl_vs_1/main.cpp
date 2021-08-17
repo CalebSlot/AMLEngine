@@ -1,11 +1,12 @@
 #include "AMLEngine.h"
 
-void processInput(AMLEngine::Core::GLFWwindowPtr window);
+void processInput(const AMLEngine::Core::Keyboard& keyboard);
 void renderLoop(AMLEngine::Core& amlngine);
 void errorHandler(int, const char*);
 //float g_MS  = 0.0f;
 //int   g_FPS = 0;
 float g_speed = 5;
+bool  g_close = false;
 AMLEngine::IPosition g_pos = { 0,0 };
 
 enum class DrawColor
@@ -60,12 +61,16 @@ void renderLoop(AMLEngine::Core& ame)
 {
     std::cout << ame.getDeltaTimeMS() << "\n";
 
+    if (g_close)
+    {
+        ame.closeWindow();
+        return;
+    }
+
+
     AMLEngine::IPosition pos = ame.getWindowCenter();
     int radius = pos.Y;
    
-
-
-
     switch (g_direction)
     {
       case Direction::NONE :
@@ -107,24 +112,29 @@ void renderLoop(AMLEngine::Core& ame)
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(AMLEngine::Core::GLFWwindowPtr window)
+void processInput(const AMLEngine::Core::Keyboard& keyboard)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+ 
+    if(keyboard.escape())
+    {
+        g_close = true;
+        return;
+    }
+  
     
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    if (keyboard.r())
     {
         g_drawColor = DrawColor::RED;
         return;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS)
+    if (keyboard.g())
     {
         g_drawColor = DrawColor::GREEN;
         return;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_B)== GLFW_PRESS)
+    if (keyboard.b())
     {
         g_drawColor = DrawColor::BLUE;
         return;
@@ -133,25 +143,25 @@ void processInput(AMLEngine::Core::GLFWwindowPtr window)
   
     g_direction = Direction::NONE;
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    if (keyboard.up())
     {
         g_direction = Direction::UP;
         //return;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    if (keyboard.down())
     {
         g_direction = Direction::DOWN;
         //return;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    if (keyboard.left())
     {
         g_direction = Direction::LEFT;
         //return;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    if (keyboard.right())
     {
         g_direction = Direction::RIGHT;
         //return;

@@ -36,6 +36,8 @@ namespace AMLEngine
 
     };
 
+
+
     class Core
     {
     public:
@@ -45,6 +47,9 @@ namespace AMLEngine
 
     public:
 
+
+       
+
         static Colors& COLORS()
         {
             static Colors colors;
@@ -52,23 +57,80 @@ namespace AMLEngine
         }
 
         typedef GLFWwindow* GLFWwindowPtr;
-        typedef void (*InputHandlerPtr)(GLFWwindowPtr);
+        class Keyboard;
+        typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
         typedef void (*RenderLoopPtr)(Core&);
         typedef void (*ErrorHandlerPtr)(int, const char*);
         typedef std::chrono::nanoseconds GLWFDuration;
         typedef std::chrono::milliseconds GLWFMilliseconds;
         typedef long long GLWFTypeLL;
 
+        class Keyboard
+        {
+            friend class Core;
+            GLFWwindowPtr window;
+
+            void setWindow(GLFWwindowPtr w)
+            {
+                window = w;
+            }
+
+        public:
+           
+
+            bool escape() const
+            {
+                return glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+            }
+
+            bool r() const
+            {
+                return glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS;
+            }
+
+            bool g() const
+            {
+                return glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
+            }
+
+            bool b() const
+            {
+                return glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS;
+            }
+
+            bool up() const
+            {
+                return glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
+            }
+
+            bool down() const
+            {
+                return glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
+            }
+
+            bool left() const
+            {
+                return glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
+            }
+
+            bool right() const
+            {
+                return glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
+            }
+        };
+
+      
     private:
         const unsigned int SCR_WIDTH = 800;
         const unsigned int SCR_HEIGHT = 600;
 
         GLFWwindowPtr window;
         RenderLoopPtr renderLoopPtr;
-        InputHandlerPtr inputHandlerPtr;
+        KeyboardInputHandlerPtr inputHandlerPtr;
         std::exception initException;
         bool isInit;
         GLWFDuration elapsed;
+        Keyboard keyboard;
         // glfw: whenever the window size changed (by OS or user resize) this callback function executes
     // ---------------------------------------------------------------------------------------------
         static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -94,6 +156,16 @@ namespace AMLEngine
         }
 
     public:
+
+       
+
+       
+
+        void closeWindow()
+        {
+            glfwSetWindowShouldClose(window, true);
+        }
+
         IPosition getWindowCenter()
         {
             IPosition pos;
@@ -124,6 +196,10 @@ namespace AMLEngine
                 glFlush();
             }
         };
+        const Keyboard& getKeyboard() const
+        {
+            return *(&keyboard);
+        }
         const GLFWwindowPtr getWindow() const
         {
             return  window;
@@ -143,7 +219,7 @@ namespace AMLEngine
             assert(eHandlerPtr != nullptr);
             glfwSetErrorCallback(eHandlerPtr);
         }
-        void setInputHandler(InputHandlerPtr iHandlerPtr)
+        void setInputHandler(KeyboardInputHandlerPtr iHandlerPtr)
         {
             assert(iHandlerPtr != nullptr);
             inputHandlerPtr = iHandlerPtr;
@@ -168,6 +244,11 @@ namespace AMLEngine
             // unsigned frame_count_per_second = 0;
             setupOrtho(SCR_WIDTH,SCR_HEIGHT);
              //main loop
+
+
+            //TODO:: add different paths on different configurations (different whiless.)
+          
+
             while (!glfwWindowShouldClose(window))
             {
 
@@ -176,7 +257,7 @@ namespace AMLEngine
 
                 // input
                 // -----
-                inputHandlerPtr(window);
+                inputHandlerPtr(keyboard);
          
                 // render
                 // ------
@@ -247,6 +328,8 @@ namespace AMLEngine
 
                 return;
             }
+
+            keyboard.setWindow(window);
 
             isInit = true;
         }
