@@ -26,8 +26,10 @@ namespace AMLEngine
         } Color;
 
         const Color RED;
+        const Color GREEN;
+        const Color BLUE;
 
-        Colors() : RED{ 1,0,0 }
+        Colors() : RED{ 1,0,0 }, GREEN{ 0,1,0 },BLUE {0,0,1}
         {
 
         }
