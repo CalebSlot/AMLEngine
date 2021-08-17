@@ -1,11 +1,11 @@
 #include "AMLEngine.h"
 
-void processInput(const AMLEngine::Core::Keyboard& keyboard);
-void renderLoop(AMLEngine::Core& amlngine);
+void processInputScene1(const AMLEngine::Core::Keyboard& keyboard);
+void renderLoopScene1(AMLEngine::Core& amlngine);
 void errorHandler(int, const char*);
 //float g_MS  = 0.0f;
 //int   g_FPS = 0;
-float g_speed = 5;
+float g_speed = 2000;
 bool  g_close = false;
 AMLEngine::IPosition g_pos = { 0,0 };
 
@@ -42,8 +42,8 @@ int main()
 
         ame.setErrorHandler(&errorHandler);
 
-        ame.setInputHandler(&processInput);
-        ame.setRenderLoop(&renderLoop);
+        ame.setInputHandler(&processInputScene1);
+        ame.setRenderLoop(&renderLoopScene1);
 
         ame.run();
    
@@ -57,9 +57,12 @@ void errorHandler(int eCode,const char* description)
 
 
 
-void renderLoop(AMLEngine::Core& ame)
+void renderLoopScene1(AMLEngine::Core& ame)
 {
+ 
     std::cout << ame.getDeltaTimeMS() << "\n";
+
+   
 
     if (g_close)
     {
@@ -71,22 +74,30 @@ void renderLoop(AMLEngine::Core& ame)
     AMLEngine::IPosition pos = ame.getWindowCenter();
     int radius = pos.Y;
    
+    const float s_dt = float(ame.getDeltaTimeMS()) * 0.001f;
+    float step = s_dt * g_speed;
+    
+    if (step < 1)
+    {
+        step = 1;
+    }
+
     switch (g_direction)
     {
       case Direction::NONE :
           g_pos = pos;
           break;
       case Direction::UP:
-          g_pos.Y -= ame.getDeltaTimeMS() * g_speed;
+          g_pos.Y -= step;
           break;
       case Direction::DOWN :
-          g_pos.Y += ame.getDeltaTimeMS() * g_speed;
+          g_pos.Y += step;
           break;
       case Direction::LEFT:
-          g_pos.X -= ame.getDeltaTimeMS() * g_speed;
+          g_pos.X -= step;
           break;
       case Direction::RIGHT:
-          g_pos.X += ame.getDeltaTimeMS() * g_speed;
+          g_pos.X += step;
           break;
     }
 
@@ -112,7 +123,7 @@ void renderLoop(AMLEngine::Core& ame)
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(const AMLEngine::Core::Keyboard& keyboard)
+void processInputScene1(const AMLEngine::Core::Keyboard& keyboard)
 {
  
     if(keyboard.escape())
@@ -146,25 +157,25 @@ void processInput(const AMLEngine::Core::Keyboard& keyboard)
     if (keyboard.up())
     {
         g_direction = Direction::UP;
-        //return;
+        return;
     }
 
     if (keyboard.down())
     {
         g_direction = Direction::DOWN;
-        //return;
+        return;
     }
 
     if (keyboard.left())
     {
         g_direction = Direction::LEFT;
-        //return;
+        return;
     }
 
     if (keyboard.right())
     {
         g_direction = Direction::RIGHT;
-        //return;
+        return;
     }
 
   
