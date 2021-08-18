@@ -128,18 +128,76 @@ namespace AMLEngine
         FrameLimit m_eRenderLimit = FrameLimit::NONE;
         const unsigned int SCR_WIDTH = 800;
         const unsigned int SCR_HEIGHT = 600;
-
+        const char * c_title = "OpenGLTestBed";
         const double FPS_60 = 1.0 / 60.0;
         const double FPS_30 = 1.0 / 30.0;
+        bool isInit = false;
 
         GLFWwindowPtr window;
         RenderLoopPtr renderLoopPtr;
         KeyboardInputHandlerPtr inputHandlerPtr;
         std::exception initException;
-        bool isInit;
         DurationNano  m_durationMainLoop;
         DurationFloat m_durationFrameLoop;
         Keyboard keyboard;
+
+
+        bool Core_init()
+        {
+           
+            // glfw: initialize and configure
+          // ------------------------------
+
+            glfwSetErrorCallback(error_callback);
+
+            if (!glfwInit())
+            {
+                // return -1;
+                initException = std::move(std::exception("Unable to glfwInit"));
+                return false;
+            }
+
+            //TODO: read from cfg file
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+            glfwWindowHint(GLFW_OPENGL_ANY_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+            // glfw window creation
+            // --------------------
+            window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, c_title, NULL, NULL);
+            if (window == NULL)
+            {
+                //std::cout << "Failed to create GLFW window" << std::endl;
+                //glfwTerminate();
+                //return -1;
+                initException = std::move(std::exception("Unable to glfwCreateWindow"));
+                return false;
+            }
+            glfwMakeContextCurrent(window);
+            glfwSetFramebufferSizeCallback(window, Core::framebuffer_size_callback);
+
+
+            // glad: load all OpenGL function pointers
+            // ---------------------------------------
+            if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+            {
+                // std::cout << "Failed to initialize GLAD" << std::endl;
+                // return -1;
+                initException = std::move(std::exception("Unable to gladLoadGLLoader"));
+
+                return false;
+            }
+
+            keyboard.setWindow(window);
+
+            return true;
+        }
+
+
         // glfw: whenever the window size changed (by OS or user resize) this callback function executes
     // ---------------------------------------------------------------------------------------------
         static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -189,7 +247,7 @@ namespace AMLEngine
 
             return pos;
         }
-        static struct Draw
+        struct Draw
         {
             static void Circle(int x, int y, int radius, const AMLEngine::Colors::Color& color)
             {
@@ -353,63 +411,30 @@ namespace AMLEngine
             }
         }
 
-        Core()
+        Core(size_t WIDTH, size_t HEIGHT, std::string title) :
+            SCR_WIDTH(WIDTH),
+            SCR_HEIGHT(HEIGHT),
+            c_title(title.c_str()),
+            m_durationMainLoop(std::chrono::system_clock::duration::min()),
+            m_durationFrameLoop(0.0f),
+            renderLoopPtr(nullptr),
+            inputHandlerPtr(nullptr),
+            window(nullptr)
+
+
         {
-            renderLoopPtr = nullptr;
-            inputHandlerPtr = nullptr;
-            window = nullptr;
-            isInit = false;
-            m_durationMainLoop = std::chrono::system_clock::duration::min();
-            // glfw: initialize and configure
-          // ------------------------------
+            isInit = Core_init();
+        }
 
-            glfwSetErrorCallback(error_callback);
-
-            if (!glfwInit())
-            {
-                // return -1;
-                initException = std::move(std::exception("Unable to glfwInit"));
-                return;
-            }
-
-            //TODO: read from cfg file
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-            glfwWindowHint(GLFW_OPENGL_ANY_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-#ifdef __APPLE__
-            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-            // glfw window creation
-            // --------------------
-            window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "OpenGLSandBox", NULL, NULL);
-            if (window == NULL)
-            {
-                //std::cout << "Failed to create GLFW window" << std::endl;
-                //glfwTerminate();
-                //return -1;
-                initException = std::move(std::exception("Unable to glfwCreateWindow"));
-                return;
-            }
-            glfwMakeContextCurrent(window);
-            glfwSetFramebufferSizeCallback(window, Core::framebuffer_size_callback);
-
-
-            // glad: load all OpenGL function pointers
-            // ---------------------------------------
-            if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-            {
-                // std::cout << "Failed to initialize GLAD" << std::endl;
-                // return -1;
-                initException = std::move(std::exception("Unable to gladLoadGLLoader"));
-
-                return;
-            }
-
-            keyboard.setWindow(window);
-
-            isInit = true;
+        Core() :
+            m_durationMainLoop(std::chrono::system_clock::duration::min()),
+            m_durationFrameLoop(0.0f),
+            renderLoopPtr(nullptr),
+            inputHandlerPtr(nullptr),
+            window(nullptr)
+           
+        {
+            isInit = Core_init();
         }
 
         // glfw: terminate, clearing all previously allocated GLFW resources.

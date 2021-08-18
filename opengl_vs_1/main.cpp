@@ -32,7 +32,7 @@ Direction g_direction = Direction::NONE;
 int main()
 {
         
-       AMLEngine::Core ame;
+        AMLEngine::Core ame(800,600,"OpenGLTestBed");
 
         if (ame.getExceptionPtr() != nullptr)
         {
