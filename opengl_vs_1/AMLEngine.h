@@ -11,6 +11,12 @@
 
 namespace AMLEngine
 {
+    struct ISize
+    {
+        int WIDTH;
+        int HEIGHT;
+    };
+
     struct IPosition
     {
         int X;
@@ -169,7 +175,10 @@ namespace AMLEngine
             //TODO: read from cfg file
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-            glfwWindowHint(GLFW_OPENGL_ANY_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            //this works only above versions
+            //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
+
 
 #ifdef __APPLE__
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -256,6 +265,14 @@ namespace AMLEngine
 
             return pos;
         }
+        ISize getWindowSize()
+        {
+            ISize size;
+
+            glfwGetWindowSize(window, &size.WIDTH, &size.HEIGHT);
+         
+            return size;
+        }
         struct Draw
         {
             static void Circle(int x, int y, int radius, const AMLEngine::Colors::Color& color)
@@ -273,7 +290,7 @@ namespace AMLEngine
 
 
                 glEnd();
-                glFlush();
+              //  glFlush();
             }
         };
         const Keyboard& getKeyboard() const

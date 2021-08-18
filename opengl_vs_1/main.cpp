@@ -1,6 +1,7 @@
 #include "AMLEngine.h"
 
 void processInputScene1(const AMLEngine::Core::Keyboard& keyboard);
+void processInputScene2(const AMLEngine::Core::Keyboard& keyboard);
 void renderLoopScene1(AMLEngine::Core& amlngine);
 void renderLoopScene2(AMLEngine::Core& amlngine);
 
@@ -8,7 +9,7 @@ void errorHandler(int, const char*);
 
 float g_speed_movement = 2000.0f;
 float g_speed_zoom     = 100.0f;
-
+float g_elapsed        = 0.0f;
 bool  g_close = false;
 AMLEngine::IPosition g_pos = { 0,0 };
 float g_radius = 0.0f;
@@ -55,8 +56,8 @@ int main()
         ame.setFrameLimit(AMLEngine::Core::FrameLimit::FPS_60);
         ame.setErrorHandler(&errorHandler);
 
-        ame.setInputHandler(&processInputScene1);
-        ame.setRenderLoop(&renderLoopScene1);
+        ame.setInputHandler(&processInputScene2);
+        ame.setRenderLoop(&renderLoopScene2);
 
         ame.run();
    
@@ -74,8 +75,16 @@ void renderLoopScene1(AMLEngine::Core& ame)
 {
  
     std::cout << ame.getDeltaTimeMS() <<  " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
+    g_elapsed += ame.getFrameTime();
 
-   
+    if (g_elapsed > 30)
+    {
+        g_elapsed = 0.0f;
+        ame.setRenderLoop(&renderLoopScene2);
+        ame.setInputHandler(&processInputScene2);
+        return;
+    }
+
 
     if (g_close)
     {
@@ -144,7 +153,56 @@ void renderLoopScene1(AMLEngine::Core& ame)
   
 }
 
+void renderLoopScene2(AMLEngine::Core& ame)
+{
+    std::cout << ame.getDeltaTimeMS() << " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
+    g_elapsed += ame.getFrameTime();
 
+    if (g_elapsed > 30)
+    {
+        g_elapsed = 0.0f;
+        ame.setRenderLoop(&renderLoopScene1);
+        ame.setInputHandler(&processInputScene1);
+        return;
+    }
+
+    AMLEngine::ISize size = ame.getWindowSize();
+    int radius   = size.HEIGHT / 16;
+    int diameter = radius * 2;
+
+    int extraSpaceY = size.HEIGHT - diameter * 8;
+    int yPos = size.HEIGHT - (extraSpaceY/2) + radius;
+
+    for (int i = 0; i < 8; i++)
+    {
+
+        yPos -= diameter;
+        int xPos = (size.WIDTH / 2) - (5 * diameter) + radius;
+
+        for (int ii = 0; ii < 8; ii++)
+        {
+            xPos += diameter;
+
+            switch (g_drawColor)
+            {
+            case DrawColor::RED:
+                AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Core::COLORS().RED);
+                g_drawColor = DrawColor::GREEN;
+                break;
+            case DrawColor::GREEN:
+                AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Core::COLORS().GREEN);
+                g_drawColor = DrawColor::BLUE;
+                break;
+            case DrawColor::BLUE:
+                AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Core::COLORS().BLUE);
+                g_drawColor = DrawColor::RED;
+                break;
+            }
+
+           
+        }
+    }
+}
 
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -217,4 +275,7 @@ void processInputScene1(const AMLEngine::Core::Keyboard& keyboard)
 
   
 }
+void processInputScene2(const AMLEngine::Core::Keyboard& keyboard)
+{
 
+}
