@@ -7,6 +7,8 @@
 #include <chrono>
 
 
+
+
 namespace AMLEngine
 {
     struct IPosition
@@ -40,15 +42,17 @@ namespace AMLEngine
 
     class Core
     {
-    public:
-
-
 
 
     public:
 
 
-       
+        enum class FrameLimit
+        {
+            NONE,
+            FPS_30,
+            FPS_60
+        };
 
         static Colors& COLORS()
         {
@@ -61,9 +65,9 @@ namespace AMLEngine
         typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
         typedef void (*RenderLoopPtr)(Core&);
         typedef void (*ErrorHandlerPtr)(int, const char*);
-        typedef std::chrono::nanoseconds GLWFDuration;
-        typedef std::chrono::milliseconds GLWFMilliseconds;
-        typedef long long GLWFTypeLL;
+        typedef std::chrono::nanoseconds DurationNano;
+        typedef long long DurationLong;
+        typedef float DurationFloat;
 
         class Keyboard
         {
@@ -121,15 +125,20 @@ namespace AMLEngine
 
       
     private:
+        FrameLimit m_eRenderLimit = FrameLimit::NONE;
         const unsigned int SCR_WIDTH = 800;
         const unsigned int SCR_HEIGHT = 600;
+
+        const double FPS_60 = 1.0 / 60.0;
+        const double FPS_30 = 1.0 / 30.0;
 
         GLFWwindowPtr window;
         RenderLoopPtr renderLoopPtr;
         KeyboardInputHandlerPtr inputHandlerPtr;
         std::exception initException;
         bool isInit;
-        GLWFDuration elapsed;
+        DurationNano  m_durationMainLoop;
+        DurationFloat m_durationFrameLoop;
         Keyboard keyboard;
         // glfw: whenever the window size changed (by OS or user resize) this callback function executes
     // ---------------------------------------------------------------------------------------------
@@ -160,6 +169,10 @@ namespace AMLEngine
        
 
        
+        void setFrameLimit(FrameLimit eRenderLimit)
+        {
+            m_eRenderLimit = eRenderLimit;
+        }
 
         void closeWindow()
         {
@@ -225,12 +238,19 @@ namespace AMLEngine
             inputHandlerPtr = iHandlerPtr;
         }
 
-        const GLWFTypeLL getDeltaTimeMS() const
+        const DurationLong getDeltaTimeMS() const
         {
-            GLWFTypeLL deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+            DurationLong deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(m_durationMainLoop).count();
             return deltaTime;
         }
-
+        const DurationFloat getDeltaTimeS() const
+        {
+            return std::chrono::duration<float>(m_durationMainLoop).count();
+        }
+        const DurationFloat getFrameTime() const
+        {
+            return m_durationFrameLoop;
+        }
         void run()
         {
             //precondition
@@ -239,39 +259,97 @@ namespace AMLEngine
                 return;
             }
 
-            auto m_BeginFrame = std::chrono::high_resolution_clock::now();
-            auto m_EndFrame = m_BeginFrame;
-            // unsigned frame_count_per_second = 0;
+            //TODO: add fixed pipe or shader
             setupOrtho(SCR_WIDTH,SCR_HEIGHT);
              //main loop
 
 
             //TODO:: add different paths on different configurations (different whiless.)
-          
-
-            while (!glfwWindowShouldClose(window))
+            //DOING
+            //FREE PFS
+            if (m_eRenderLimit == FrameLimit::NONE)
             {
+                auto m_BeginFrame = std::chrono::high_resolution_clock::now();
+                auto m_EndFrame = m_BeginFrame;
 
-                auto loop_elapsed = m_EndFrame - m_BeginFrame;
-                elapsed = loop_elapsed;
+                while (!glfwWindowShouldClose(window))
+                {
 
-                // input
-                // -----
-                inputHandlerPtr(keyboard);
-         
-                // render
-                // ------
-                glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT);
+                    auto loop_elapsed = m_EndFrame - m_BeginFrame;
+                    m_durationMainLoop  = loop_elapsed;
+                    m_durationFrameLoop = std::chrono::duration<float>(m_durationMainLoop).count();
+                    
+                    // input
+                    // -----
+                    inputHandlerPtr(keyboard);
 
-                renderLoopPtr(*this);
-                // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-                // -------------------------------------------------------------------------------
-                glfwSwapBuffers(window);
-                glfwPollEvents();
+                    // render
+                    // ------
+                    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT);
 
-                m_BeginFrame = m_EndFrame;
-                m_EndFrame = std::chrono::high_resolution_clock::now();
+                    renderLoopPtr(*this);
+                    // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+                    // -------------------------------------------------------------------------------
+                    glfwSwapBuffers(window);
+                    glfwPollEvents();
+
+                    m_BeginFrame = m_EndFrame;
+                    m_EndFrame = std::chrono::high_resolution_clock::now();
+                }
+            }
+            //FIXED PFS
+            else
+            {
+                double renderLimit = FPS_60;
+
+                switch(m_eRenderLimit)
+                { 
+                case(FrameLimit::FPS_30) :
+                    renderLimit = FPS_30;
+                    break;
+                case(FrameLimit::FPS_60) :
+                    renderLimit = FPS_60;
+                    break;
+                }
+            
+                auto m_BeginTime     = std::chrono::high_resolution_clock::now();
+                auto m_EndTime       = m_BeginTime;
+                auto m_LastFrameTime = m_BeginTime;
+
+                while (!glfwWindowShouldClose(window))
+                {
+
+                    auto loop_elapsed = m_EndTime - m_BeginTime;
+                    m_durationMainLoop = loop_elapsed;
+
+                    // input
+                    // -----
+                    inputHandlerPtr(keyboard);
+
+                    // render
+                    // ------
+                    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    std::chrono::duration<float> renderTime = m_EndTime - m_LastFrameTime;
+                    m_durationFrameLoop = renderTime.count();
+
+                    if (m_durationFrameLoop >= renderLimit)
+                    {
+                        renderLoopPtr(*this);
+                        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+                        // -------------------------------------------------------------------------------
+                        glfwSwapBuffers(window);
+                        m_LastFrameTime = std::chrono::high_resolution_clock::now();
+                    }
+
+                 
+                    glfwPollEvents();
+
+                    m_BeginTime = m_EndTime;
+                    m_EndTime = std::chrono::high_resolution_clock::now();
+                }
             }
         }
 
@@ -281,7 +359,7 @@ namespace AMLEngine
             inputHandlerPtr = nullptr;
             window = nullptr;
             isInit = false;
-            elapsed = std::chrono::system_clock::duration::min();
+            m_durationMainLoop = std::chrono::system_clock::duration::min();
             // glfw: initialize and configure
           // ------------------------------
 

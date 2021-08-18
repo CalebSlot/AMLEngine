@@ -40,6 +40,8 @@ int main()
             return -1;
         }
 
+
+        ame.setFrameLimit(AMLEngine::Core::FrameLimit::FPS_60);
         ame.setErrorHandler(&errorHandler);
 
         ame.setInputHandler(&processInputScene1);
@@ -60,7 +62,7 @@ void errorHandler(int eCode,const char* description)
 void renderLoopScene1(AMLEngine::Core& ame)
 {
  
-    std::cout << ame.getDeltaTimeMS() << "\n";
+    std::cout << ame.getDeltaTimeMS() <<  " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
 
    
 
@@ -74,7 +76,7 @@ void renderLoopScene1(AMLEngine::Core& ame)
     AMLEngine::IPosition pos = ame.getWindowCenter();
     int radius = pos.Y;
    
-    const float s_dt = float(ame.getDeltaTimeMS()) * 0.001f;
+    const float s_dt = ame.getFrameTime();
     float step = s_dt * g_speed;
     
     if (step < 1)
@@ -82,7 +84,7 @@ void renderLoopScene1(AMLEngine::Core& ame)
         step = 1;
     }
 
-    switch (g_direction)
+   switch (g_direction)
     {
       case Direction::NONE :
           g_pos = pos;
