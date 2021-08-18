@@ -71,8 +71,7 @@ namespace AMLEngine
         typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
         typedef void (*RenderLoopPtr)(Core&);
         typedef void (*ErrorHandlerPtr)(int, const char*);
-        typedef std::chrono::nanoseconds DurationNano;
-        typedef long long DurationLong;
+        typedef std::chrono::duration<float> DurationSeconds;
         typedef float DurationFloat;
 
         class Keyboard
@@ -144,15 +143,15 @@ namespace AMLEngine
         const unsigned int SCR_WIDTH = 800;
         const unsigned int SCR_HEIGHT = 600;
         const char * c_title = "OpenGLTestBed";
-        const double FPS_60 = 1.0 / 60.0;
-        const double FPS_30 = 1.0 / 30.0;
+        const float FPS_60 = 1.0f / 60.0f;
+        const float FPS_30 = 1.0f / 30.0f;
         bool isInit = false;
 
         GLFWwindowPtr window;
         RenderLoopPtr renderLoopPtr;
         KeyboardInputHandlerPtr inputHandlerPtr;
         std::exception initException;
-        DurationNano  m_durationMainLoop;
+        DurationSeconds  m_durationMainLoop;
         DurationFloat m_durationFrameLoop;
         Keyboard keyboard;
 
@@ -322,15 +321,20 @@ namespace AMLEngine
             inputHandlerPtr = iHandlerPtr;
         }
 
-        const DurationLong getDeltaTimeMS() const
+        //get the last loop cicle execution time in milliseconds 
+        //if the frame rate is not fixed it has the same value as the frame rate (the last is in seconds)
+        const DurationFloat getDeltaTimeMS() const
         {
-            DurationLong deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(m_durationMainLoop).count();
-            return deltaTime;
+            return std::chrono::duration_cast<std::chrono::milliseconds>(m_durationMainLoop).count();
         }
+        //get the last loop cicle execution time in milliseconds 
+        //if the frame rate is not fixed it has the same value as the frame rate
         const DurationFloat getDeltaTimeS() const
         {
-            return std::chrono::duration<float>(m_durationMainLoop).count();
+            return m_durationMainLoop.count();
         }
+        //get the last frame execution time in seconds
+        //if the frame rate is not fixed it has the same value getDeltaTimeS()
         const DurationFloat getFrameTime() const
         {
             return m_durationFrameLoop;
@@ -351,21 +355,35 @@ namespace AMLEngine
             //TODO:: add different paths on different configurations (different whiless.)
             //DOING
             //FREE PFS
+
+            float counter = 0.0f;
+            float fixedDt = 0.003f;
+
             if (m_eRenderLimit == FrameLimit::NONE)
             {
                 auto m_BeginFrame = std::chrono::high_resolution_clock::now();
                 auto m_EndFrame = m_BeginFrame;
-
+              
                 while (!glfwWindowShouldClose(window))
                 {
+                    m_durationMainLoop  = m_EndFrame - m_BeginFrame;
+                    m_durationFrameLoop = m_durationMainLoop.count();
+                    counter += m_durationFrameLoop;
 
-                    auto loop_elapsed = m_EndFrame - m_BeginFrame;
-                    m_durationMainLoop  = loop_elapsed;
-                    m_durationFrameLoop = std::chrono::duration<float>(m_durationMainLoop).count();
-                    
+                    glfwPollEvents();
                     // input
                     // -----
                     inputHandlerPtr(keyboard);
+
+
+                    //update
+                    size_t steps = 0;
+                    while (counter >= fixedDt)
+                    {
+                        steps++;
+                        //updateCallback(*this)
+                        counter -= fixedDt;
+                    }
 
                     // render
                     // ------
@@ -376,7 +394,7 @@ namespace AMLEngine
                     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
                     // -------------------------------------------------------------------------------
                     glfwSwapBuffers(window);
-                    glfwPollEvents();
+                 
 
                     m_BeginFrame = m_EndFrame;
                     m_EndFrame = std::chrono::high_resolution_clock::now();
@@ -400,36 +418,46 @@ namespace AMLEngine
                 auto m_BeginTime     = std::chrono::high_resolution_clock::now();
                 auto m_EndTime       = m_BeginTime;
                 auto m_LastFrameTime = m_BeginTime;
+             
 
                 while (!glfwWindowShouldClose(window))
                 {
+                    m_durationMainLoop                      = m_EndTime - m_BeginTime;
+                    std::chrono::duration<float> renderTime = m_EndTime - m_LastFrameTime;
+                    m_durationFrameLoop                     = renderTime.count();
+          
+                    counter += m_durationMainLoop.count();
 
-                    auto loop_elapsed = m_EndTime - m_BeginTime;
-                    m_durationMainLoop = loop_elapsed;
 
+                    glfwPollEvents();
                     // input
                     // -----
                     inputHandlerPtr(keyboard);
 
-                    // render
+                    //update
+                    size_t steps = 0;
+                    while (counter >= fixedDt)
+                    {
+                        //updateCallback(*this)
+                        steps++;
+                        counter -= fixedDt;
+                    }
+
+                    //render
                     // ------
                     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
                     glClear(GL_COLOR_BUFFER_BIT);
 
-                    std::chrono::duration<float> renderTime = m_EndTime - m_LastFrameTime;
-                    m_durationFrameLoop = renderTime.count();
 
                     if (m_durationFrameLoop >= renderLimit)
                     {
+
                         renderLoopPtr(*this);
-                        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+                        //glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
                         // -------------------------------------------------------------------------------
                         glfwSwapBuffers(window);
                         m_LastFrameTime = std::chrono::high_resolution_clock::now();
                     }
-
-                 
-                    glfwPollEvents();
 
                     m_BeginTime = m_EndTime;
                     m_EndTime = std::chrono::high_resolution_clock::now();

@@ -13,7 +13,7 @@ float g_elapsed        = 0.0f;
 bool  g_close = false;
 AMLEngine::IPosition g_pos = { 0,0 };
 float g_radius = 0.0f;
-
+AMLEngine::Core::FrameLimit fLimit = AMLEngine::Core::FrameLimit::FPS_60;
 enum class DrawColor
 {
     RED,
@@ -53,7 +53,7 @@ int main()
         }
 
 
-        ame.setFrameLimit(AMLEngine::Core::FrameLimit::FPS_60);
+        ame.setFrameLimit(fLimit);
         ame.setErrorHandler(&errorHandler);
 
         ame.setInputHandler(&processInputScene2);
@@ -69,21 +69,39 @@ void errorHandler(int eCode,const char* description)
     std::cerr <<"ERROR: "<< eCode << " " << description;
 }
 
+void switchScene(AMLEngine::Core& ame,size_t scene)
+{
 
+    if (scene == 1)
+    {
+        ame.setRenderLoop(&renderLoopScene1);
+        ame.setInputHandler(&processInputScene1);
+        return;
+    }
+    if (scene == 2)
+    {
+        ame.setRenderLoop(&renderLoopScene2);
+        ame.setInputHandler(&processInputScene2);
+        return;
+    }
+    
+}
 
 void renderLoopScene1(AMLEngine::Core& ame)
 {
  
-    std::cout << ame.getDeltaTimeMS() <<  " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
+   
     g_elapsed += ame.getFrameTime();
 
     if (g_elapsed > 30)
     {
         g_elapsed = 0.0f;
-        ame.setRenderLoop(&renderLoopScene2);
-        ame.setInputHandler(&processInputScene2);
+        switchScene(ame, 2);
         return;
     }
+   
+    std::cout << g_elapsed << " " << ame.getDeltaTimeMS() << " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
+
 
 
     if (g_close)
@@ -155,16 +173,17 @@ void renderLoopScene1(AMLEngine::Core& ame)
 
 void renderLoopScene2(AMLEngine::Core& ame)
 {
-    std::cout << ame.getDeltaTimeMS() << " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
-    g_elapsed += ame.getFrameTime();
 
-    if (g_elapsed > 30)
-    {
-        g_elapsed = 0.0f;
-        ame.setRenderLoop(&renderLoopScene1);
-        ame.setInputHandler(&processInputScene1);
-        return;
-    }
+        g_elapsed += ame.getFrameTime();
+
+        if (g_elapsed > 30)
+        {
+            g_elapsed = 0.0f;
+            switchScene(ame, 1);
+            return;
+        }
+        
+    std::cout << g_elapsed << " " << ame.getDeltaTimeMS() << " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
 
     AMLEngine::ISize size = ame.getWindowSize();
     int radius   = size.HEIGHT / 16;
