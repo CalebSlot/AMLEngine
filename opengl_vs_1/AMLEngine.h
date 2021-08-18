@@ -121,6 +121,15 @@ namespace AMLEngine
             {
                 return glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
             }
+
+            bool plus() const
+            {
+                return glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS;
+            }
+            bool minus() const
+            {
+                return glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS;
+            }
         };
 
       

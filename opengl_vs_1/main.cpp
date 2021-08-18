@@ -2,12 +2,16 @@
 
 void processInputScene1(const AMLEngine::Core::Keyboard& keyboard);
 void renderLoopScene1(AMLEngine::Core& amlngine);
+void renderLoopScene2(AMLEngine::Core& amlngine);
+
 void errorHandler(int, const char*);
-//float g_MS  = 0.0f;
-//int   g_FPS = 0;
-float g_speed = 2000;
+
+float g_speed_movement = 2000.0f;
+float g_speed_zoom     = 100.0f;
+
 bool  g_close = false;
 AMLEngine::IPosition g_pos = { 0,0 };
+float g_radius = 0.0f;
 
 enum class DrawColor
 {
@@ -25,9 +29,16 @@ enum class Direction
     RIGHT
 };
 
+enum class Size
+{
+ NONE,
+ PLUS,
+ MINUS
+};
 
 DrawColor g_drawColor = DrawColor::RED;
 Direction g_direction = Direction::NONE;
+Size g_size = Size::NONE;
 
 int main()
 {
@@ -77,11 +88,24 @@ void renderLoopScene1(AMLEngine::Core& ame)
     int radius = pos.Y;
    
     const float s_dt = ame.getFrameTime();
-    float step = s_dt * g_speed;
+    float step = s_dt * g_speed_movement;
     
     if (step < 1)
     {
         step = 1;
+    }
+
+    switch (g_size)
+    {
+    case Size::NONE:
+        g_radius = radius;
+        break;
+    case Size::MINUS:
+        g_radius -= s_dt * g_speed_zoom;
+        break;
+    case Size::PLUS:
+        g_radius += s_dt * g_speed_zoom;
+        break;
     }
 
    switch (g_direction)
@@ -106,13 +130,13 @@ void renderLoopScene1(AMLEngine::Core& ame)
     switch (g_drawColor)
     {
     case DrawColor::RED: 
-        AMLEngine::Core::Draw::Circle(g_pos.X, g_pos.Y, radius, AMLEngine::Core::COLORS().RED);
+        AMLEngine::Core::Draw::Circle(g_pos.X, g_pos.Y, g_radius, AMLEngine::Core::COLORS().RED);
         break;
      case DrawColor::GREEN:
-        AMLEngine::Core::Draw::Circle(g_pos.X, g_pos.Y, radius, AMLEngine::Core::COLORS().GREEN);
+        AMLEngine::Core::Draw::Circle(g_pos.X, g_pos.Y, g_radius, AMLEngine::Core::COLORS().GREEN);
         break;
      case DrawColor::BLUE:
-        AMLEngine::Core::Draw::Circle(g_pos.X, g_pos.Y, radius, AMLEngine::Core::COLORS().BLUE);
+        AMLEngine::Core::Draw::Circle(g_pos.X, g_pos.Y, g_radius, AMLEngine::Core::COLORS().BLUE);
         break;
     }
     
@@ -155,7 +179,18 @@ void processInputScene1(const AMLEngine::Core::Keyboard& keyboard)
 
   
     g_direction = Direction::NONE;
+    g_size = Size::NONE;
 
+    if (keyboard.plus())
+    {
+        g_size = Size::PLUS;
+       
+    }
+    if (keyboard.minus())
+    {
+        g_size = Size::MINUS;
+
+    }
     if (keyboard.up())
     {
         g_direction = Direction::UP;
