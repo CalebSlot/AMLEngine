@@ -1,10 +1,12 @@
 #include "AMLEngine.h"
 
+
 void processInputScene1(const AMLEngine::Core::Keyboard& keyboard);
 void processInputScene2(const AMLEngine::Core::Keyboard& keyboard);
+void processInputScene3(const AMLEngine::Core::Keyboard& keyboard);
 void renderLoopScene1(AMLEngine::Core& amlngine);
 void renderLoopScene2(AMLEngine::Core& amlngine);
-
+void renderLoopScene3(AMLEngine::Core& amlngine);
 void errorHandler(int, const char*);
 
 float g_speed_movement = 2000.0f;
@@ -293,6 +295,15 @@ void processInputScene1(const AMLEngine::Core::Keyboard& keyboard)
   
 }
 void processInputScene2(const AMLEngine::Core::Keyboard& keyboard)
+{
+
+}
+void renderLoopScene3(const AMLEngine::Core& core)
+{
+
+}
+
+void processInputScene3(const AMLEngine::Core::Keyboard& keyboard)
 {
 
 }
