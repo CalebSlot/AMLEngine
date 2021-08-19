@@ -41,6 +41,7 @@ private:
     float g_radius = 0.0f;
     bool g_scene3Start = false;
     AMLEngine::IPosition g_snakePos = { 0,0 };
+    AMLEngine::IPosition g_snakePositions[100];
     AMLEngine::Colors::Color g_snakeColor = AMLEngine::Core::COLORS().GREEN;
     int g_snakeLen = 1;
     AMLEngine::Core::FrameLimit fLimit = AMLEngine::Core::FrameLimit::FPS_60;
@@ -98,6 +99,7 @@ private:
         }
         if (scene == 3)
         {
+            g_scene3Start = false;
             ame.setRenderLoop(std::bind(&Demos::renderLoopScene3, this, _1));
             ame.setInputHandler(std::bind(&Demos::processInputScene3, this, _1));
             return;
@@ -317,8 +319,6 @@ private:
 
     //this is a simple snake game (constrained  movement only the snake can move up down left right inside the map,
     //no opposite directions allowed, keep directions on key press)
-
-    AMLEngine::IPosition g_snakePositions[100];
 
     void renderLoopScene3(AMLEngine::Core& core)
     {
