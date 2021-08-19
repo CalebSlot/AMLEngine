@@ -69,7 +69,8 @@ namespace AMLEngine
         typedef GLFWwindow* GLFWwindowPtr;
         class Keyboard;
         typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
-        typedef void (*RenderLoopPtr)(Core&);
+        typedef void (*RenderHandlerPtr)(Core&);
+        typedef void (*UpdateHandlerPtr)();
         typedef void (*ErrorHandlerPtr)(int, const char*);
         typedef std::chrono::duration<float> DurationSeconds;
         typedef float DurationFloat;
@@ -148,8 +149,9 @@ namespace AMLEngine
         bool isInit = false;
 
         GLFWwindowPtr window;
-        RenderLoopPtr renderLoopPtr;
+        RenderHandlerPtr renderHandlerPtr;
         KeyboardInputHandlerPtr inputHandlerPtr;
+        UpdateHandlerPtr updateHandlerPtr;
         std::exception initException;
         DurationSeconds  m_durationMainLoop;
         DurationFloat m_durationFrameLoop;
@@ -243,7 +245,18 @@ namespace AMLEngine
 
        
 
-       
+        void renderFallback(AMLEngine::Core& core)
+        {
+
+        }
+        void inputFallback(AMLEngine::Core::Keyboard& keyboard)
+        {
+
+        }
+        void updateFallback()
+        {
+
+        }
         void setFrameLimit(FrameLimit eRenderLimit)
         {
             m_eRenderLimit = eRenderLimit;
@@ -305,10 +318,10 @@ namespace AMLEngine
             return isInit ? nullptr : &initException;
         }
 
-        void setRenderLoop(RenderLoopPtr rLoopPtr)
+        void setRenderLoop(RenderHandlerPtr rLoopPtr)
         {
             assert(rLoopPtr != nullptr);
-            renderLoopPtr = rLoopPtr;
+            renderHandlerPtr = rLoopPtr;
         }
         void setErrorHandler(ErrorHandlerPtr eHandlerPtr)
         {
@@ -320,7 +333,12 @@ namespace AMLEngine
             assert(iHandlerPtr != nullptr);
             inputHandlerPtr = iHandlerPtr;
         }
-
+        void setUpdateHandler(UpdateHandlerPtr uHandlerPtr)
+        {
+            assert(uHandlerPtr != nullptr);
+            updateHandlerPtr = uHandlerPtr;
+        }
+        private:
         //get the last loop cicle execution time in milliseconds 
         //if the frame rate is not fixed it has the same value as the frame rate (the last is in seconds)
         const DurationFloat getDeltaTimeMS() const
@@ -333,6 +351,7 @@ namespace AMLEngine
         {
             return m_durationMainLoop.count();
         }
+        public:
         //get the last frame execution time in seconds
         //if the frame rate is not fixed it has the same value getDeltaTimeS()
         const DurationFloat getFrameTime() const
@@ -342,11 +361,31 @@ namespace AMLEngine
         void run()
         {
             //precondition
-            if (!isInit || !renderLoopPtr || !inputHandlerPtr)
+            if (!isInit)
             {
                 return;
             }
 
+            if (!renderHandlerPtr)
+            {
+                renderHandlerPtr = [](Core&) {
+
+                };
+            }
+
+            if (!inputHandlerPtr)
+            {
+                inputHandlerPtr = [](const Core::Keyboard&) {
+
+                };
+            
+            }
+            if (!updateHandlerPtr)
+            {
+                updateHandlerPtr = []() {
+
+                };
+            }
             //TODO: add fixed pipe or shader
             setupOrtho(SCR_WIDTH,SCR_HEIGHT);
              //main loop
@@ -380,9 +419,10 @@ namespace AMLEngine
                     size_t steps = 0;
                     while (counter >= fixedDt)
                     {
-                        steps++;
-                        //updateCallback(*this)
+                        updateHandlerPtr();
+
                         counter -= fixedDt;
+                        steps++;
                     }
 
                     // render
@@ -390,7 +430,7 @@ namespace AMLEngine
                     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
                     glClear(GL_COLOR_BUFFER_BIT);
 
-                    renderLoopPtr(*this);
+                    renderHandlerPtr(*this);
                     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
                     // -------------------------------------------------------------------------------
                     glfwSwapBuffers(window);
@@ -438,9 +478,10 @@ namespace AMLEngine
                     size_t steps = 0;
                     while (counter >= fixedDt)
                     {
-                        //updateCallback(*this)
-                        steps++;
+                        updateHandlerPtr();
+
                         counter -= fixedDt;
+                        steps++;
                     }
 
                     //render
@@ -452,7 +493,7 @@ namespace AMLEngine
                     if (m_durationFrameLoop >= renderLimit)
                     {
 
-                        renderLoopPtr(*this);
+                        renderHandlerPtr(*this);
                         //glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
                         // -------------------------------------------------------------------------------
                         glfwSwapBuffers(window);
@@ -460,7 +501,7 @@ namespace AMLEngine
                     }
 
                     m_BeginTime = m_EndTime;
-                    m_EndTime = std::chrono::high_resolution_clock::now();
+                    m_EndTime   = std::chrono::high_resolution_clock::now();
                 }
             }
         }
@@ -471,7 +512,8 @@ namespace AMLEngine
             c_title(title.c_str()),
             m_durationMainLoop(std::chrono::system_clock::duration::min()),
             m_durationFrameLoop(0.0f),
-            renderLoopPtr(nullptr),
+            updateHandlerPtr(nullptr),
+            renderHandlerPtr(nullptr),
             inputHandlerPtr(nullptr),
             window(nullptr)
 
@@ -483,7 +525,8 @@ namespace AMLEngine
         Core() :
             m_durationMainLoop(std::chrono::system_clock::duration::min()),
             m_durationFrameLoop(0.0f),
-            renderLoopPtr(nullptr),
+            updateHandlerPtr(nullptr),
+            renderHandlerPtr(nullptr),
             inputHandlerPtr(nullptr),
             window(nullptr)
            

@@ -100,9 +100,7 @@ void renderLoopScene1(AMLEngine::Core& ame)
         return;
     }
    
-    std::cout << g_elapsed << " " << ame.getDeltaTimeMS() << " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
-
-
+    std::cout << g_elapsed << " " <<  ame.getFrameTime() <<  "\n";
 
     if (g_close)
     {
@@ -183,7 +181,7 @@ void renderLoopScene2(AMLEngine::Core& ame)
             return;
         }
         
-    std::cout << g_elapsed << " " << ame.getDeltaTimeMS() << " " << ame.getFrameTime() << " " << ame.getDeltaTimeS() << "\n";
+    std::cout << g_elapsed << " " << ame.getFrameTime() <<  "\n";
 
     AMLEngine::ISize size = ame.getWindowSize();
     int radius   = size.HEIGHT / 16;
