@@ -2,8 +2,9 @@
 
 int main()
 {
-        
-    Demos demos;
+    AMLEngine::Core ame(800, 600, "AMLEngineDemos");
+
+    Demos demos(ame);
     demos.Play();
 
 

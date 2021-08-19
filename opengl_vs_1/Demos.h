@@ -50,18 +50,17 @@ private:
 
 
     //ENGINE
-    std::unique_ptr<AMLEngine::Core> ame;
-
+    AMLEngine::Core& ame;
 public:
 
 
 
-    Demos()
+    Demos(AMLEngine::Core& core) : ame(core)
     {
-        ame = std::make_unique<AMLEngine::Core>(800, 600, "AMLEngineDemos");
-        if (ame->getExceptionPtr() != nullptr)
+
+        if(ame.getExceptionPtr())
         {
-            std::cout << ame->getExceptionPtr()->what() << std::endl;
+            std::cout << ame.getExceptionPtr()->what() << std::endl;
         }
 
     }
@@ -69,12 +68,12 @@ public:
     void Play()
     {
 
-        ame->setFrameLimit(fLimit);
-        ame->setErrorHandler(&errorHandler);
-        ame->setInputHandler(std::bind(&Demos::processInputScene3,this,_1));
-        ame->setRenderLoop(std::bind(&Demos::renderLoopScene3,this,_1));
+        ame.setFrameLimit(fLimit);
+        ame.setErrorHandler(&errorHandler);
+        ame.setInputHandler(std::bind(&Demos::processInputScene3,this,_1));
+        ame.setRenderLoop(std::bind(&Demos::renderLoopScene3,this,_1));
 
-        ame->run();
+        ame.run();
     }
 
 private:
