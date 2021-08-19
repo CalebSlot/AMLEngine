@@ -287,7 +287,18 @@ namespace AMLEngine
         }
         struct Draw
         {
-            static void Circle(int x, int y, int radius, const AMLEngine::Colors::Color& color)
+            static void Square(int x, int y,size_t side, const AMLEngine::Colors::Color& color)
+            {
+                float halfSide = side / 2;
+                glColor3f(color.r, color.g, color.b);
+                glBegin(GL_QUADS);
+                    glVertex2f(x - halfSide, y- halfSide);
+                    glVertex2f(x - halfSide, y+ halfSide);
+                    glVertex2f(x + halfSide, y+ halfSide);
+                    glVertex2f(x + halfSide, y- halfSide);
+                glEnd();
+            }
+            static void Circle(int x, int y, size_t radius, const AMLEngine::Colors::Color& color)
             {
                 float theta;
 

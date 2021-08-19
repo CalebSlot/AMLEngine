@@ -203,7 +203,7 @@ void renderLoopScene2(AMLEngine::Core& ame)
             switch (g_drawColor)
             {
             case DrawColor::RED:
-                AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Core::COLORS().RED);
+                AMLEngine::Core::Draw::Square(xPos, yPos, diameter, AMLEngine::Core::COLORS().RED);
                 g_drawColor = DrawColor::GREEN;
                 break;
             case DrawColor::GREEN:
