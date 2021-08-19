@@ -10,11 +10,19 @@ void renderLoopScene3(AMLEngine::Core& amlngine);
 void errorHandler(int, const char*);
 
 float g_speed_movement = 2000.0f;
+float g_speed_snake    = 1000.0f;
 float g_speed_zoom     = 100.0f;
 float g_elapsed        = 0.0f;
 bool  g_close = false;
 AMLEngine::IPosition g_pos = { 0,0 };
 float g_radius = 0.0f;
+bool g_scene3Start = false;
+AMLEngine::IPosition g_snakePos = { 0,0 };
+
+AMLEngine::Colors::Color g_snakeColor = AMLEngine::Core::COLORS().GREEN;
+int g_snakeLen  = 1;
+
+
 AMLEngine::Core::FrameLimit fLimit = AMLEngine::Core::FrameLimit::FPS_60;
 enum class DrawColor
 {
@@ -58,8 +66,8 @@ int main()
         ame.setFrameLimit(fLimit);
         ame.setErrorHandler(&errorHandler);
 
-        ame.setInputHandler(&processInputScene2);
-        ame.setRenderLoop(&renderLoopScene2);
+        ame.setInputHandler(&processInputScene3);
+        ame.setRenderLoop(&renderLoopScene3);
 
         ame.run();
    
@@ -86,7 +94,12 @@ void switchScene(AMLEngine::Core& ame,size_t scene)
         ame.setInputHandler(&processInputScene2);
         return;
     }
-    
+    if (scene == 3)
+    {
+        ame.setRenderLoop(&renderLoopScene3);
+        ame.setInputHandler(&processInputScene3);
+        return;
+    }
 }
 
 void renderLoopScene1(AMLEngine::Core& ame)
@@ -179,7 +192,7 @@ void renderLoopScene2(AMLEngine::Core& ame)
         if (g_elapsed > 30)
         {
             g_elapsed = 0.0f;
-            switchScene(ame, 1);
+            switchScene(ame, 3);
             return;
         }
         
@@ -298,12 +311,148 @@ void processInputScene2(const AMLEngine::Core::Keyboard& keyboard)
 {
 
 }
-void renderLoopScene3(const AMLEngine::Core& core)
+
+
+//this is a simple snake game (constrained  movement only the snake can move up down left right inside the map,
+//no opposite directions allowed, keep directions on key press)
+
+AMLEngine::IPosition g_snakePositions[100];
+
+void renderLoopScene3(AMLEngine::Core& core)
 {
+    g_elapsed += core.getFrameTime();
+
+    if (g_elapsed > 30)
+    {
+        g_elapsed = 0.0f;
+        switchScene(core, 1);
+        return;
+    }
+
+
+
+    std::cout << g_elapsed << " " << core.getFrameTime() << "\n";
+
+    AMLEngine::ISize size = core.getWindowSize();
+    int side = size.HEIGHT / 64;
+    int hside = side / 2;
+
+    if (!g_scene3Start)
+    {
+        g_snakeLen = 20;
+        AMLEngine::IPosition pos = core.getWindowCenter();
+        g_snakePos = pos;
+
+        for (int i = 0;i < g_snakeLen;i++)
+        {
+            g_snakePositions[i] = pos;
+        }
+
+        AMLEngine::Core::Draw::Square(pos.X, pos.Y, side, g_snakeColor);
+        g_scene3Start = true;
+        return;
+    }
+
+    if (g_elapsed > 2.0)
+    {
+        bool canMove = true;
+
+        AMLEngine::IPosition prevPosition = g_snakePos;
+
+        if (g_direction == Direction::RIGHT)
+        {
+            g_snakePos.X += side;
+        }
+        else
+        if (g_direction == Direction::LEFT)
+        {
+            g_snakePos.X -= side;
+        }
+        else
+        if (g_direction == Direction::UP)
+        {
+            g_snakePos.Y -= side;
+        }
+        else
+        if (g_direction == Direction::DOWN)
+        {
+           g_snakePos.Y += side;
+        }
+
+        if ((g_snakePos.X <= side || g_snakePos.X >= size.WIDTH - side) || (g_snakePos.Y <= side || g_snakePos.Y >= size.HEIGHT - side))
+        {
+            g_snakePos = prevPosition;
+            canMove    = false;
+        }
+
+        if (canMove)
+        {
+            for (int i = 0;i < g_snakeLen - 1;i++)
+            {
+                g_snakePositions[i] = g_snakePositions[i + 1];
+            }
+
+            g_snakePositions[g_snakeLen - 1] = g_snakePos;
+        }
+
+    }
+
+   
+
+    int numBlocks = size.HEIGHT / side + 6;
+
+    for (int i = 0; i < numBlocks; i++)
+    {
+        AMLEngine::Core::Draw::Square(hside, hside + i * side, side, AMLEngine::Core::COLORS().RED);
+        AMLEngine::Core::Draw::Square(size.WIDTH - hside, hside + i * side, side, AMLEngine::Core::COLORS().RED);
+   
+    }
+
+     numBlocks = size.WIDTH / side + 6;
+
+    for (int i = 0; i < numBlocks; i++)
+    {
+        AMLEngine::Core::Draw::Square(hside + i * side, hside, side, AMLEngine::Core::COLORS().RED);
+        AMLEngine::Core::Draw::Square(hside + i * side, size.HEIGHT - hside , side, AMLEngine::Core::COLORS().RED);
+
+    }
+    for (int i = 0;i < g_snakeLen;i++)
+    {
+        AMLEngine::Core::Draw::Square(g_snakePositions[i].X, g_snakePositions[i].Y, side, g_snakeColor);
+    }
+
 
 }
 
 void processInputScene3(const AMLEngine::Core::Keyboard& keyboard)
 {
+
+    if (keyboard.up() && g_direction !=Direction::DOWN)
+    {
+    
+        g_direction = Direction::UP;
+        return;
+    }
+
+    if (keyboard.down() && g_direction != Direction::UP)
+    {
+      
+        g_direction = Direction::DOWN;
+        return;
+    }
+
+    if (keyboard.left() && g_direction != Direction::RIGHT)
+    {
+     
+        g_direction = Direction::LEFT;
+        return;
+    }
+
+    if (keyboard.right() && g_direction != Direction::LEFT)
+    {
+       
+        g_direction = Direction::RIGHT;
+        return;
+    }
 
 }
