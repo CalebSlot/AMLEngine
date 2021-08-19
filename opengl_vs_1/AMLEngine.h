@@ -6,6 +6,7 @@
 #include <cassert>
 #include <chrono>
 
+#include <functional>
 
 
 
@@ -68,10 +69,16 @@ namespace AMLEngine
 
         typedef GLFWwindow* GLFWwindowPtr;
         class Keyboard;
-        typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
-        typedef void (*RenderHandlerPtr)(Core&);
-        typedef void (*UpdateHandlerPtr)();
+
+        typedef std::function<void(const Keyboard&)> KeyboardInputHandlerPtr;
+        typedef std::function<void(Core&)> RenderHandlerPtr;
+        typedef std::function<void(void)> UpdateHandlerPtr;
+
+       // typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
+       // typedef void (*RenderHandlerPtr)(Core&);
+       // typedef void (*UpdateHandlerPtr)();
         typedef void (*ErrorHandlerPtr)(int, const char*);
+
         typedef std::chrono::duration<float> DurationSeconds;
         typedef float DurationFloat;
 

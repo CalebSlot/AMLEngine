@@ -26,5 +26,8 @@
     <ClInclude Include="AMLEngine.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
+    <ClInclude Include="Demos.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
