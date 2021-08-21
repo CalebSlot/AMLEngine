@@ -23,7 +23,12 @@ namespace AMLEngine
         int X;
         int Y;
     };
-
+    struct FPosition3
+    {
+        float X;
+        float Y;
+        float Z;
+    };
     struct Colors
     {
         typedef struct
@@ -321,6 +326,51 @@ namespace AMLEngine
 
                 glEnd();
               //  glFlush();
+            }
+            static void Curve(AMLEngine::FPosition3* positions,size_t numPoints,size_t numPoints_subCurve,size_t interp_steps, const AMLEngine::Colors::Color& color,size_t connect_prevs = 0,bool draw_points = false,float point_size = 5.0f)
+            {
+                
+                const float f_interp_steps = (float)interp_steps;
+                if (numPoints_subCurve > numPoints)
+                {
+                    numPoints_subCurve = numPoints;
+                }
+
+                int step = (int)numPoints_subCurve - (int)connect_prevs;
+                if (step < 0)
+                {
+                    step = 0;
+                }
+
+                glColor3f(color.r, color.g, color.b);
+
+                for (int i = 0; (i + step) < numPoints; i += step) {
+   
+                    glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, numPoints_subCurve, &positions[i].X);
+                    glEnable(GL_MAP1_VERTEX_3);
+
+                    glBegin(GL_LINE_STRIP);
+                    {
+                        for (int i = 0; i < (int)interp_steps; i++) {
+                            glEvalCoord1f(((float)i) / f_interp_steps);
+                        }
+                    }
+                    glEnd();
+                }
+
+                if (draw_points)
+                {
+                    glPointSize(point_size);
+                    glBegin(GL_POINTS);
+                    for (int i = 0; i < numPoints; i++)
+                    {
+                        glVertex3fv(&positions[i].X);
+                    }
+                    glEnd();
+
+                }
+
+                glFlush();
             }
         };
         const Keyboard& getKeyboard() const

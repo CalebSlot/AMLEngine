@@ -1,6 +1,7 @@
 #pragma once
 #include "AMLEngine.h"
 #include <functional>
+#include <algorithm>
 using namespace std::placeholders;
 class Demos
 {
@@ -106,6 +107,26 @@ private:
         }
     }
 
+    
+  
+    AMLEngine::FPosition3 g_positions[20];
+    float g_elapsed_l = -1;
+    float g_point_size = 5.0f;
+
+    int g_points_subcurve = 4;
+    int g_connect_prevs = 1;
+    int g_numPoints = 20;
+    float g_interp_steps = 100;
+    bool g_drawPoints = true;
+    bool  g_recalc    = false;
+
+    static bool compare(AMLEngine::FPosition3 a, AMLEngine::FPosition3 b) {
+        if (a.X < b.X)
+            return 1;
+        else
+            return 0;
+    }
+
     void renderLoopScene1(AMLEngine::Core& ame)
     {
 
@@ -185,7 +206,28 @@ private:
         }
 
 
+        g_elapsed_l += ame.getFrameTime();
 
+        if (g_elapsed_l >=3 || g_elapsed_l < 0)
+        {
+            g_recalc  = true;
+            g_elapsed_l = 0;
+        }
+       
+        if (g_recalc)
+        {
+            for (int i = 0;i < g_numPoints;i++)
+            {
+
+                g_positions[i].X = 0 + (std::rand() % (300 - 0 + 1));
+                g_positions[i].Y = 0 + (std::rand() % (200 - 0 + 1));
+                g_positions[i].Z = 0;
+            }
+            std::sort(g_positions, g_positions + g_numPoints, compare);
+            g_recalc = false;
+        }
+        
+        AMLEngine::Core::Draw::Curve(g_positions,g_numPoints, g_points_subcurve,g_interp_steps,AMLEngine::Core::COLORS().BLUE, g_connect_prevs,true,g_point_size);
     }
 
     void renderLoopScene2(AMLEngine::Core& ame)
