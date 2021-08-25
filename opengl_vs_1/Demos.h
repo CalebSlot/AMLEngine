@@ -369,6 +369,7 @@ private:
 
     //this is a simple snake game (constrained  movement only the snake can move up down left right inside the map,
     //no opposite directions allowed, keep directions on key press)
+
     void renderLoopScene3(AMLEngine::Core& core)
     {
         m_fElapsed_3 += switchScene(ame, 1);
@@ -381,6 +382,7 @@ private:
 
         if (!m_bScene3Start)
         {
+            m_eDirectionSnake = Direction::NONE;
             m_iLenSnake = 20;
             AMLEngine::IPosition pos = core.getWindowCenter();
             m_oIPosSnake = pos;
@@ -421,6 +423,7 @@ private:
                             m_oIPosSnake.Y += side;
                         }
 
+            //check collision on walls
             if ((m_oIPosSnake.X <= side || m_oIPosSnake.X >= size.WIDTH - side) || (m_oIPosSnake.Y <= side || m_oIPosSnake.Y >= size.HEIGHT - side))
             {
                 m_oIPosSnake = prevPosition;
@@ -429,13 +432,41 @@ private:
 
             if (canMove)
             {
-                for (int i = 0;i < m_iLenSnake - 1;i++)
+        
+                if (m_eDirectionSnake == Direction::NONE)
                 {
-                    m_vIPosSnake[i] = m_vIPosSnake[i + 1];
-                }
+                    for (int i = 0;i < m_iLenSnake - 1;i++)
+                    {
+                        m_vIPosSnake[i] = m_vIPosSnake[i + 1];
+                    }
 
-                m_vIPosSnake[m_iLenSnake - 1] = m_oIPosSnake;
+                    m_vIPosSnake[m_iLenSnake - 1] = m_oIPosSnake;
+
+                }
+                else
+                {
+                    for (int i = m_iLenSnake - 1;i > 1; i--)
+                    {
+                        if (m_oIPosSnake == m_vIPosSnake[i])
+                        {
+                            m_oIPosSnake = prevPosition;
+                            canMove = false;
+                            break;
+                        }
+                    }
+
+                    if (canMove)
+                    {
+                        for (int i = 0;i < m_iLenSnake - 1;i++)
+                        {
+                            m_vIPosSnake[i] = m_vIPosSnake[i + 1];
+                        }
+
+                        m_vIPosSnake[m_iLenSnake - 1] = m_oIPosSnake;
+                    }
+                }
             }
+            
 
             m_fElapsed_3 = 0.0f;
         }

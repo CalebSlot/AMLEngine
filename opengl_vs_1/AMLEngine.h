@@ -22,6 +22,16 @@ namespace AMLEngine
     {
         int X;
         int Y;
+
+        bool operator == (const IPosition& other)
+        {
+            if (&other == this)
+            {
+                return true;
+            }
+            return other.X == X && other.Y == Y;
+        }
+
     };
     struct FPosition3
     {
