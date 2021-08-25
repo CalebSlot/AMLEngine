@@ -369,7 +369,6 @@ private:
 
     //this is a simple snake game (constrained  movement only the snake can move up down left right inside the map,
     //no opposite directions allowed, keep directions on key press)
-
     void renderLoopScene3(AMLEngine::Core& core)
     {
         m_fElapsed_3 += switchScene(ame, 1);
