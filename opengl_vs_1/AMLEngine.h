@@ -469,12 +469,15 @@ namespace AMLEngine
             if (m_eRenderLimit == FrameLimit::NONE)
             {
                 auto m_BeginFrame = std::chrono::high_resolution_clock::now();
-                auto m_EndFrame = m_BeginFrame;
+                auto m_EndFrame   = m_BeginFrame;
               
                 while (!glfwWindowShouldClose(window))
                 {
+                    m_EndFrame          = std::chrono::high_resolution_clock::now();
                     m_durationMainLoop  = m_EndFrame - m_BeginFrame;
                     m_durationFrameLoop = m_durationMainLoop.count();
+                    m_BeginFrame        = m_EndFrame;
+
                     counter += m_durationFrameLoop;
 
                     glfwPollEvents();
@@ -504,8 +507,7 @@ namespace AMLEngine
                     glfwSwapBuffers(window);
                  
 
-                    m_BeginFrame = m_EndFrame;
-                    m_EndFrame = std::chrono::high_resolution_clock::now();
+                 
                 }
             }
             //FIXED PFS
@@ -530,10 +532,13 @@ namespace AMLEngine
 
                 while (!glfwWindowShouldClose(window))
                 {
+                    m_EndTime                               = std::chrono::high_resolution_clock::now();
                     m_durationMainLoop                      = m_EndTime - m_BeginTime;
                     std::chrono::duration<float> renderTime = m_EndTime - m_LastFrameTime;
+
                     m_durationFrameLoop                     = renderTime.count();
-          
+                    m_BeginTime = m_EndTime;
+
                     counter += m_durationMainLoop.count();
 
 
@@ -568,8 +573,8 @@ namespace AMLEngine
                         m_LastFrameTime = std::chrono::high_resolution_clock::now();
                     }
 
-                    m_BeginTime = m_EndTime;
-                    m_EndTime   = std::chrono::high_resolution_clock::now();
+                   
+                 
                 }
             }
         }

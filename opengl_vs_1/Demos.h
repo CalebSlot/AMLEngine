@@ -34,9 +34,10 @@ private:
 
     //DEMOS VARIABLES
     float m_fSpeed_Circle                   = 2000.0f;
-    float m_fSpeed_Snake                    = 1000.0f;
+    float m_fSpeed_Snake                    = 0.2f;
     float m_fSpeed_Zoom                     = 100.0f;
-    float m_fElapsed                        = 0.0f;
+    float m_fElapsed_3                        = 0.0f;
+    float m_fElapsed_0                      = 0.0f;
     bool  m_bClose                          = false;
     AMLEngine::IPosition m_oIPosCircle      = { 0,0 };
     float m_fRadius                         = 0.0f;
@@ -49,7 +50,20 @@ private:
     DrawColor m_eDrawColor                  = DrawColor::RED;
     Direction m_eDirectionSnake             = Direction::NONE;
     Size m_eSize                            = Size::NONE;
+    AMLEngine::FPosition3 m_vFPosControlPoints[20];
+    float m_fElapsed_1 = -1;
+    float m_fPointSize = 5.0f;
 
+    int   m_iPoints_subcurve = 4;
+    int   m_iConnect_prevs = 1;
+    int   m_iNumPoints = 20;
+    float m_fInterp_steps = 100;
+    bool  m_bDrawPoints = true;
+    bool  m_bRecalc = false;
+
+
+    std::chrono::steady_clock::time_point   m_BeginTime;
+    std::chrono::steady_clock::time_point   m_EndTime;
 
     //ENGINE
     AMLEngine::Core& ame;
@@ -75,6 +89,11 @@ public:
         ame.setInputHandler(std::bind(&Demos::processInputScene3,this,_1));
         ame.setRenderLoop(std::bind(&Demos::renderLoopScene3,this,_1));
 
+
+
+        m_BeginTime = std::chrono::high_resolution_clock::now();
+        m_EndTime   = m_BeginTime;
+
         ame.run();
     }
 
@@ -83,42 +102,47 @@ private:
     {
         std::cerr << "ERROR: " << eCode << " " << description;
     }
-    void switchScene(AMLEngine::Core& ame, size_t scene)
+    float switchScene(AMLEngine::Core& ame, size_t scene)
     {
+        m_EndTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> elapsedTime = m_EndTime - m_BeginTime;
 
-        if (scene == 1)
+        m_BeginTime = m_EndTime; 
+
+        const auto fElapsed = elapsedTime.count();
+
+        m_fElapsed_0 += fElapsed;
+
+        std::cout << m_fElapsed_0 << " ";
+
+        if (m_fElapsed_0 >= 30)
         {
-            ame.setRenderLoop(std::bind(&Demos::renderLoopScene1, this, _1));
-            ame.setInputHandler(std::bind(&Demos::processInputScene1, this, _1));
-            return;
+            m_fElapsed_0 = 0.0f;
+
+            if (scene == 1)
+            {
+                ame.setRenderLoop(std::bind(&Demos::renderLoopScene1, this, _1));
+                ame.setInputHandler(std::bind(&Demos::processInputScene1, this, _1));
+            } else
+            if (scene == 2)
+            {
+                ame.setRenderLoop(std::bind(&Demos::renderLoopScene2, this, _1));
+                ame.setInputHandler(std::bind(&Demos::processInputScene2, this, _1));
+            } else
+            if (scene == 3)
+            {
+                m_bScene3Start = false;
+                ame.setRenderLoop(std::bind(&Demos::renderLoopScene3, this, _1));
+                ame.setInputHandler(std::bind(&Demos::processInputScene3, this, _1));
+            }
         }
-        if (scene == 2)
-        {
-            ame.setRenderLoop(std::bind(&Demos::renderLoopScene2, this, _1));
-            ame.setInputHandler(std::bind(&Demos::processInputScene2, this, _1));
-            return;
-        }
-        if (scene == 3)
-        {
-            m_bScene3Start = false;
-            ame.setRenderLoop(std::bind(&Demos::renderLoopScene3, this, _1));
-            ame.setInputHandler(std::bind(&Demos::processInputScene3, this, _1));
-            return;
-        }
+
+        return fElapsed;
     }
 
     
   
-    AMLEngine::FPosition3 g_positions[20];
-    float g_elapsed_l = -1;
-    float g_point_size = 5.0f;
 
-    int g_points_subcurve = 4;
-    int g_connect_prevs = 1;
-    int g_numPoints = 20;
-    float g_interp_steps = 100;
-    bool g_drawPoints = true;
-    bool  g_recalc    = false;
 
     static bool compare(AMLEngine::FPosition3 a, AMLEngine::FPosition3 b) {
         if (a.X < b.X)
@@ -131,16 +155,9 @@ private:
     {
 
 
-        m_fElapsed += ame.getFrameTime();
+        m_fElapsed_1 += switchScene(ame, 2);
 
-        if (m_fElapsed > 30)
-        {
-            m_fElapsed = 0.0f;
-            switchScene(ame, 2);
-            return;
-        }
-
-        std::cout << m_fElapsed << " " << ame.getFrameTime() << "\n";
+        std::cout << ame.getFrameTime() << "\n";
 
         if (m_bClose)
         {
@@ -205,44 +222,35 @@ private:
             break;
         }
 
-
-        g_elapsed_l += ame.getFrameTime();
-
-        if (g_elapsed_l >=3 || g_elapsed_l < 0)
+        if (m_fElapsed_1 >=3 || m_fElapsed_1 < 0)
         {
-            g_recalc  = true;
-            g_elapsed_l = 0;
+            m_bRecalc  = true;
+            m_fElapsed_1 = 0;
         }
        
-        if (g_recalc)
+        if (m_bRecalc)
         {
-            for (int i = 0;i < g_numPoints;i++)
+            for (int i = 0;i < m_iNumPoints;i++)
             {
 
-                g_positions[i].X = 0 + (std::rand() % (300 - 0 + 1));
-                g_positions[i].Y = 0 + (std::rand() % (200 - 0 + 1));
-                g_positions[i].Z = 0;
+                m_vFPosControlPoints[i].X = 0 + (std::rand() % (300 - 0 + 1));
+                m_vFPosControlPoints[i].Y = 0 + (std::rand() % (200 - 0 + 1));
+                m_vFPosControlPoints[i].Z = 0;
             }
-            std::sort(g_positions, g_positions + g_numPoints, compare);
-            g_recalc = false;
+            std::sort(m_vFPosControlPoints, m_vFPosControlPoints + m_iNumPoints, compare);
+            m_bRecalc = false;
         }
         
-        AMLEngine::Core::Draw::Curve(g_positions,g_numPoints, g_points_subcurve,g_interp_steps,AMLEngine::Core::COLORS().BLUE, g_connect_prevs,true,g_point_size);
+        AMLEngine::Core::Draw::Curve(m_vFPosControlPoints,m_iNumPoints, m_iPoints_subcurve,m_fInterp_steps,AMLEngine::Core::COLORS().BLUE, m_iConnect_prevs,true,m_fPointSize);
     }
 
     void renderLoopScene2(AMLEngine::Core& ame)
     {
 
-        m_fElapsed += ame.getFrameTime();
-
-        if (m_fElapsed > 30)
-        {
-            m_fElapsed = 0.0f;
-            switchScene(ame, 3);
-            return;
-        }
-
-        std::cout << m_fElapsed << " " << ame.getFrameTime() << "\n";
+     
+        switchScene(ame, 3);
+    
+        std::cout << ame.getFrameTime() << "\n";
 
         AMLEngine::ISize size = ame.getWindowSize();
         int radius = size.HEIGHT / 16;
@@ -364,18 +372,9 @@ private:
 
     void renderLoopScene3(AMLEngine::Core& core)
     {
-        m_fElapsed += core.getFrameTime();
+        m_fElapsed_3 += switchScene(ame, 1);
 
-        if (m_fElapsed > 30)
-        {
-            m_fElapsed = 0.0f;
-            switchScene(core, 1);
-            return;
-        }
-
-
-
-        std::cout << m_fElapsed << " " << core.getFrameTime() << "\n";
+        std::cout << ame.getFrameTime() << "\n";
 
         AMLEngine::ISize size = core.getWindowSize();
         int side = size.HEIGHT / 64;
@@ -397,7 +396,7 @@ private:
             return;
         }
 
-        if (m_fElapsed > 2.0)
+        if (m_fElapsed_3 >= m_fSpeed_Snake)
         {
             bool canMove = true;
 
@@ -439,6 +438,7 @@ private:
                 m_vIPosSnake[m_iLenSnake - 1] = m_oIPosSnake;
             }
 
+            m_fElapsed_3 = 0.0f;
         }
 
 
