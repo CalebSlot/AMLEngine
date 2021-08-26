@@ -2,13 +2,15 @@
 #include "AMLEngine.h"
 #include <functional>
 #include <algorithm>
+#include "snake.h"
+
 using namespace std::placeholders;
 class Demos
 {
 
 private:
 
-
+   
     enum class DrawColor
     {
         RED,
@@ -34,21 +36,14 @@ private:
 
     //DEMOS VARIABLES
     float m_fSpeed_Circle                   = 2000.0f;
-    float m_fSpeed_Snake                    = 0.2f;
     float m_fSpeed_Zoom                     = 100.0f;
-    float m_fElapsed_3                        = 0.0f;
     float m_fElapsed_0                      = 0.0f;
     bool  m_bClose                          = false;
     AMLEngine::IPosition m_oIPosCircle      = { 0,0 };
     float m_fRadius                         = 0.0f;
-    bool m_bScene3Start                     = false;
-    AMLEngine::IPosition m_oIPosSnake       = { 0,0 };
-    AMLEngine::IPosition m_vIPosSnake[100];
-    AMLEngine::Colors::Color m_oColorSnake  = AMLEngine::Core::COLORS().GREEN;
-    int m_iLenSnake                         = 1;
     AMLEngine::Core::FrameLimit m_fLimit    = AMLEngine::Core::FrameLimit::FPS_60;
     DrawColor m_eDrawColor                  = DrawColor::RED;
-    Direction m_eDirectionSnake             = Direction::NONE;
+    Direction m_eDirectionCircle            = Direction::NONE;
     Size m_eSize                            = Size::NONE;
     AMLEngine::FPosition3 m_vFPosControlPoints[20];
     float m_fElapsed_1 = -1;
@@ -62,11 +57,34 @@ private:
     bool  m_bRecalc = false;
 
 
-    std::chrono::steady_clock::time_point   m_BeginTime;
-    std::chrono::steady_clock::time_point   m_EndTime;
+    AMLEngine::Core::Timer m_oTimer;
 
     //ENGINE
     AMLEngine::Core& ame;
+
+
+    //Snake Scene
+    AMLEngine::Core::Scene<SnakeScene> m_oSnakeScene;
+
+    //todo: move as engine funfuction or leave here as scenemanager (to build upon this demos class)
+    template <template <class> class S,class T>
+    void setRenderLoop(S<T>& scene)
+    {
+        
+        ame.setRenderLoop([this,&scene](AMLEngine::Core& core) 
+        {
+            this->switchScene(core,1);
+            scene.render(core);
+        });
+
+    }
+    template <template <class> class S, class T>
+    void setInputHandler(S<T>& scene)
+    {
+        ame.setInputHandler(std::bind(&S<T>::input, &scene, _1));
+    }
+
+
 public:
 
 
@@ -86,14 +104,15 @@ public:
 
         ame.setFrameLimit(m_fLimit);
         ame.setErrorHandler(&errorHandler);
-        ame.setInputHandler(std::bind(&Demos::processInputScene3,this,_1));
-        ame.setRenderLoop(std::bind(&Demos::renderLoopScene3,this,_1));
 
+        m_oSnakeScene.create(ame);
 
+        setInputHandler(m_oSnakeScene);
+        setRenderLoop(m_oSnakeScene);
 
-        m_BeginTime = std::chrono::high_resolution_clock::now();
-        m_EndTime   = m_BeginTime;
+        m_oTimer.GetTime();
 
+       
         ame.run();
     }
 
@@ -102,22 +121,19 @@ private:
     {
         std::cerr << "ERROR: " << eCode << " " << description;
     }
-    float switchScene(AMLEngine::Core& ame, size_t scene)
+    void switchScene(AMLEngine::Core& ame, size_t scene)
     {
-        m_EndTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float> elapsedTime = m_EndTime - m_BeginTime;
-
-        m_BeginTime = m_EndTime; 
-
-        const auto fElapsed = elapsedTime.count();
+        const auto fElapsed = m_oTimer.GetTime();
 
         m_fElapsed_0 += fElapsed;
+        m_fElapsed_1 += fElapsed;
 
         std::cout << m_fElapsed_0 << " ";
 
         if (m_fElapsed_0 >= 30)
         {
             m_fElapsed_0 = 0.0f;
+            m_fElapsed_1 = 0.0f;
 
             if (scene == 1)
             {
@@ -131,13 +147,12 @@ private:
             } else
             if (scene == 3)
             {
-                m_bScene3Start = false;
-                ame.setRenderLoop(std::bind(&Demos::renderLoopScene3, this, _1));
-                ame.setInputHandler(std::bind(&Demos::processInputScene3, this, _1));
+                m_oSnakeScene.create(ame);
+                setRenderLoop(m_oSnakeScene);
+                setInputHandler(m_oSnakeScene);
             }
         }
 
-        return fElapsed;
     }
 
     
@@ -154,8 +169,7 @@ private:
     void renderLoopScene1(AMLEngine::Core& ame)
     {
 
-
-        m_fElapsed_1 += switchScene(ame, 2);
+        switchScene(ame, 2);
 
         std::cout << ame.getFrameTime() << "\n";
 
@@ -190,7 +204,7 @@ private:
             break;
         }
 
-        switch (m_eDirectionSnake)
+        switch (m_eDirectionCircle)
         {
         case Direction::NONE:
             m_oIPosCircle = pos;
@@ -322,7 +336,7 @@ private:
         }
 
 
-        m_eDirectionSnake = Direction::NONE;
+        m_eDirectionCircle = Direction::NONE;
         m_eSize = Size::NONE;
 
         if (keyboard.plus())
@@ -337,25 +351,25 @@ private:
         }
         if (keyboard.up())
         {
-            m_eDirectionSnake = Direction::UP;
+            m_eDirectionCircle = Direction::UP;
             return;
         }
 
         if (keyboard.down())
         {
-            m_eDirectionSnake = Direction::DOWN;
+            m_eDirectionCircle = Direction::DOWN;
             return;
         }
 
         if (keyboard.left())
         {
-            m_eDirectionSnake = Direction::LEFT;
+            m_eDirectionCircle = Direction::LEFT;
             return;
         }
 
         if (keyboard.right())
         {
-            m_eDirectionSnake = Direction::RIGHT;
+            m_eDirectionCircle = Direction::RIGHT;
             return;
         }
 
@@ -367,167 +381,6 @@ private:
     }
 
 
-    //this is a simple snake game (constrained  movement only the snake can move up down left right inside the map,
-    //no opposite directions allowed, keep directions on key press)
-
-    void renderLoopScene3(AMLEngine::Core& core)
-    {
-        m_fElapsed_3 += switchScene(ame, 1);
-
-        std::cout << ame.getFrameTime() << "\n";
-
-        AMLEngine::ISize size = core.getWindowSize();
-        int side = size.HEIGHT / 64;
-        int hside = side / 2;
-
-        if (!m_bScene3Start)
-        {
-            m_eDirectionSnake = Direction::NONE;
-            m_iLenSnake = 20;
-            AMLEngine::IPosition pos = core.getWindowCenter();
-            m_oIPosSnake = pos;
-
-            for (int i = 0;i < m_iLenSnake;i++)
-            {
-                m_vIPosSnake[i] = pos;
-            }
-
-            AMLEngine::Core::Draw::Square(pos.X, pos.Y, side, m_oColorSnake);
-            m_bScene3Start = true;
-            return;
-        }
-
-        if (m_fElapsed_3 >= m_fSpeed_Snake)
-        {
-            bool canMove = true;
-
-            AMLEngine::IPosition prevPosition = m_oIPosSnake;
-
-            if (m_eDirectionSnake == Direction::RIGHT)
-            {
-                m_oIPosSnake.X += side;
-            }
-            else
-                if (m_eDirectionSnake == Direction::LEFT)
-                {
-                    m_oIPosSnake.X -= side;
-                }
-                else
-                    if (m_eDirectionSnake == Direction::UP)
-                    {
-                        m_oIPosSnake.Y -= side;
-                    }
-                    else
-                        if (m_eDirectionSnake == Direction::DOWN)
-                        {
-                            m_oIPosSnake.Y += side;
-                        }
-
-            //check collision on walls
-            if ((m_oIPosSnake.X <= side || m_oIPosSnake.X >= size.WIDTH - side) || (m_oIPosSnake.Y <= side || m_oIPosSnake.Y >= size.HEIGHT - side))
-            {
-                m_oIPosSnake = prevPosition;
-                canMove = false;
-            }
-
-            if (canMove)
-            {
-        
-                if (m_eDirectionSnake == Direction::NONE)
-                {
-                    for (int i = 0;i < m_iLenSnake - 1;i++)
-                    {
-                        m_vIPosSnake[i] = m_vIPosSnake[i + 1];
-                    }
-
-                    m_vIPosSnake[m_iLenSnake - 1] = m_oIPosSnake;
-
-                }
-                else
-                {
-                    for (int i = m_iLenSnake - 1;i > 1; i--)
-                    {
-                        if (m_oIPosSnake == m_vIPosSnake[i])
-                        {
-                            m_oIPosSnake = prevPosition;
-                            canMove = false;
-                            break;
-                        }
-                    }
-
-                    if (canMove)
-                    {
-                        for (int i = 0;i < m_iLenSnake - 1;i++)
-                        {
-                            m_vIPosSnake[i] = m_vIPosSnake[i + 1];
-                        }
-
-                        m_vIPosSnake[m_iLenSnake - 1] = m_oIPosSnake;
-                    }
-                }
-            }
-            
-
-            m_fElapsed_3 = 0.0f;
-        }
-
-
-
-        int numBlocks = size.HEIGHT / side + 6;
-
-        for (int i = 0; i < numBlocks; i++)
-        {
-            AMLEngine::Core::Draw::Square(hside, hside + i * side, side, AMLEngine::Core::COLORS().RED);
-            AMLEngine::Core::Draw::Square(size.WIDTH - hside, hside + i * side, side, AMLEngine::Core::COLORS().RED);
-
-        }
-
-        numBlocks = size.WIDTH / side + 6;
-
-        for (int i = 0; i < numBlocks; i++)
-        {
-            AMLEngine::Core::Draw::Square(hside + i * side, hside, side, AMLEngine::Core::COLORS().RED);
-            AMLEngine::Core::Draw::Square(hside + i * side, size.HEIGHT - hside, side, AMLEngine::Core::COLORS().RED);
-
-        }
-        for (int i = 0;i < m_iLenSnake;i++)
-        {
-            AMLEngine::Core::Draw::Square(m_vIPosSnake[i].X, m_vIPosSnake[i].Y, side, m_oColorSnake);
-        }
-
-
-    }
-
-    void processInputScene3(const AMLEngine::Core::Keyboard& keyboard)
-    {
-
-        if (keyboard.up() && m_eDirectionSnake != Direction::DOWN)
-        {
-
-            m_eDirectionSnake = Direction::UP;
-            return;
-        }
-
-        if (keyboard.down() && m_eDirectionSnake != Direction::UP)
-        {
-
-            m_eDirectionSnake = Direction::DOWN;
-            return;
-        }
-
-        if (keyboard.left() && m_eDirectionSnake != Direction::RIGHT)
-        {
-
-            m_eDirectionSnake = Direction::LEFT;
-            return;
-        }
-
-        if (keyboard.right() && m_eDirectionSnake != Direction::LEFT)
-        {
-
-            m_eDirectionSnake = Direction::RIGHT;
-            return;
-        }
-
-    }
+   
+   
 };

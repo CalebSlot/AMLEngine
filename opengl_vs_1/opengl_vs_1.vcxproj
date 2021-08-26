@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="AMLEngine.h" />
     <ClInclude Include="Demos.h" />
+    <ClInclude Include="snake.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -29,5 +29,8 @@
     <ClInclude Include="Demos.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
+    <ClInclude Include="snake.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+#pragma once
 #define GLFW_INCLUDE_NONE
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -12,6 +13,8 @@
 
 namespace AMLEngine
 {
+
+
     struct ISize
     {
         int WIDTH;
@@ -64,11 +67,65 @@ namespace AMLEngine
 
     class Core
     {
-
+       class Keyboard;
 
     public:
+        //UTILITY CLASS TO HANDLE A SCENE
+        //THE ENGINE USER SHOULD IMPLEMENT THE PROPER S class and do something like this
+        //Scene<SceneImpl> myScene;
+
+        template <class S>
+        class Scene : S
+        {
+
+        public:
 
 
+            void create(AMLEngine::Core& oCore)
+            {
+                this->OnCreate(oCore);
+            }
+            void render(AMLEngine::Core& oCore)
+            {
+                this->OnRender(oCore);
+            }
+            void update()
+            {
+                this->OnUpdate();
+            }
+            void input(const AMLEngine::Core::Keyboard& oKeyboard)
+            {
+                this->OnInput(oKeyboard);
+            }
+            void destroy(AMLEngine::Core& oCore)
+            {
+                this->destroy(oCore);
+            }
+        };
+
+        struct Timer
+        {
+            std::chrono::steady_clock::time_point   m_BeginTime;
+            std::chrono::steady_clock::time_point   m_EndTime;
+
+            Timer()
+            {
+                m_BeginTime = std::chrono::high_resolution_clock::now();
+                m_EndTime = m_BeginTime;
+            }
+
+            float GetTime()
+            {
+                m_EndTime = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<float> elapsedTime = m_EndTime - m_BeginTime;
+
+                m_BeginTime = m_EndTime;
+
+                const auto fElapsed = elapsedTime.count();
+
+                return fElapsed;
+            }
+        };
         enum class FrameLimit
         {
             NONE,
