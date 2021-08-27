@@ -57,7 +57,7 @@ private:
 
 public:
  
-    Snake(AMLEngine::IPosition startPosition,AMLEngine::ISize moveArea,AMLEngine::Colors::Color snakeColor,size_t startLen) : m_eDirectionSnake(Direction::NONE)
+    Snake(AMLEngine::IPosition startPosition,AMLEngine::ISize moveArea,AMLEngine::Colors::Color snakeColor,size_t startLen) : m_eDirectionSnake(Opcode::NONE)
     {
         m_eState = SnakeState::HOME;
         m_fElapsed = 0.0f;

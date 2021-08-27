@@ -9,7 +9,7 @@ class BrainSnake1
 public:
 
     //input logic here
-    static Snake<BrainSnake1>::SnakeState Input(Snake<BrainSnake1>& snake, const Snake<BrainSnake1>::Command& directions)
+    static void Input(Snake<BrainSnake1>& snake, const Snake<BrainSnake1>::Command& directions)
     {
         if (directions[0] == Snake<BrainSnake1>::Opcode::UP && snake.m_eDirectionSnake != Snake<BrainSnake1>::Opcode::DOWN)
         {
