@@ -2,12 +2,12 @@
 #define GLFW_INCLUDE_NONE
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
+#include <IL/IL.h>
 #include <iostream>
 #include <cassert>
 #include <chrono>
-
 #include <functional>
+#include <unordered_map>
 
 
 
@@ -356,6 +356,7 @@ namespace AMLEngine
 
             return pos;
         }
+
         ISize getWindowSize()
         {
             ISize size;
@@ -364,8 +365,267 @@ namespace AMLEngine
          
             return size;
         }
+
+        
+
         struct Draw
         {
+           
+            class Texture;
+            class TextureHandle;
+            
+            class TextureManager
+            {
+                friend class TextureHandle;
+            private:
+                
+                std::hash<std::string> hasher;
+
+                typedef std::unordered_map<size_t, TextureHandle> TMap;
+                typedef std::vector<Texture*> TVector;
+                TMap       texturesHandles;
+                TVector    texturesStorage;
+
+                TextureManager() 
+                {
+                    // Initialize DevIL
+                    ilInit();
+
+                    // Set the first loaded point to the
+                    // upper-left corner.
+                    ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
+                    ilEnable(IL_ORIGIN_SET);
+                }
+
+                Texture* GetTexture(const TextureHandle& handle)
+                {
+                    if (texturesStorage.size() < handle.ID)
+                    {
+                        return nullptr;
+                    }
+
+                    Texture* tex = texturesStorage[handle.ID];
+
+                    return handle == tex->textureHandle ? tex : nullptr;
+                }
+
+            public:
+   
+
+                static TextureManager& GetInstance()
+                {
+                    // Returns the unique class instance.
+                    static TextureManager Instance;
+                
+                    return Instance;
+                }
+
+              
+
+                TextureHandle GetTextureHandle(const std::string& strTextName)
+                {
+                    size_t hash = hasher(strTextName);
+                    // Look in the map if the texture is already loaded.
+                    TMap::const_iterator iter = texturesHandles.find(hash);
+
+                    if (iter != texturesHandles.end())
+                        return iter->second;
+
+                    Texture* tempT = new Texture(strTextName);
+                    TextureHandle handle = tempT->textureHandle;
+
+                    if (tempT->m_TextData.pData != nullptr)
+                    {
+                        tempT = nullptr;
+                    }
+
+                    if (tempT != nullptr)
+                    {
+                     
+                        texturesStorage.emplace_back(tempT);
+                        tempT->textureHandle.HASH = hash;
+                        tempT->textureHandle.ID   = texturesStorage.size();
+                    
+                        handle = tempT->textureHandle;
+                        texturesHandles[hash] = handle;
+
+
+                    }
+
+                    return handle;
+                }
+            };
+
+            class TextureHandle
+            {
+                friend class TextureManager;
+
+            private:
+                size_t ID;
+                size_t HASH;
+            public:
+
+                TextureHandle() : ID(0),HASH(0)
+                {
+                 
+                }
+
+                bool operator == (const TextureHandle& other) const
+                {
+                    if (&other == this)
+                    {
+                        return true;
+                    }
+
+                    return other.ID == ID && other.HASH == HASH;
+                }
+                bool Valid() const
+                {
+                    return !(ID == 0 && HASH == 0);
+                }
+
+                void SetColorKey(unsigned char Red, unsigned char Green, unsigned char Blue)
+                {
+                    Texture* t = TextureManager::GetInstance().GetTexture(*this);
+
+                    if (t == nullptr)
+                    {
+                        return;
+                    }
+
+                    t->SetColorKey(Red,Green,Blue);
+                }
+                void Bind()
+                {
+                    Texture* t = TextureManager::GetInstance().GetTexture(*this);
+
+                    if (t == nullptr)
+                    {
+                        return;
+                    }
+
+                    t->Bind();
+                }
+            };
+
+            class Texture
+            {
+                friend class TextureManager;
+                friend class TextureHandle;
+
+            private:
+
+                unsigned int GetWidth()  const { return m_TextData.nWidth; }
+
+                unsigned int GetHeight() const { return m_TextData.nHeight; }
+
+                const TextureHandle& GetHandle()
+                {
+                    return textureHandle;
+                }
+                void SetColorKey(unsigned char Red, unsigned char Green, unsigned char Blue)
+                {
+
+
+
+                    if (m_glId)
+                    {
+                        glDeleteTextures(1, &m_glId);
+                        m_glId = 0;
+                    }
+
+
+                    unsigned long Count = m_TextData.nWidth * m_TextData.nHeight * 4;
+                    for (unsigned long i = 0; i < Count; i += 4)
+                    {
+                        if ((m_TextData.pData[i] == Red) && (m_TextData.pData[i + 1] == Green)
+                            && (m_TextData.pData[i + 2] == Blue))
+                            m_TextData.pData[i + 3] = 0;
+                        else
+                            m_TextData.pData[i + 3] = 255;
+
+                    }
+                }
+                void Bind() const
+                {
+
+                    if (!m_glId)
+                    {
+
+                        glGenTextures(1, &m_glId);
+
+                        glBindTexture(GL_TEXTURE_2D, m_glId);
+
+
+                        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+                        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+
+                        glTexImage2D(GL_TEXTURE_2D, 0, 4, m_TextData.nWidth, m_TextData.nHeight,
+                            0, GL_RGBA, GL_UNSIGNED_BYTE, m_TextData.pData);
+                    }
+
+                    glBindTexture(GL_TEXTURE_2D, m_glId);
+                }
+
+                Texture(const Texture&);
+                Texture(const std::string& strFileName) : m_TextData(), m_glId(0)
+                    
+                {
+
+                    m_TextData.nHeight = m_TextData.nWidth = 0;
+                    m_TextData.pData = nullptr;
+
+                    LoadFile(strFileName);
+
+                }
+
+                void LoadFile(const std::string& strFileName)
+                {
+
+                    ILuint imgId;
+                    ilGenImages(1, &imgId);
+                    ilBindImage(imgId);
+
+                    // Load the file data in the current image.
+                    if (!ilLoadImage(strFileName.c_str()))
+                    {
+                        return;
+                    }
+
+                    // Store the data in our STextureData structure.
+                    m_TextData.nWidth = ilGetInteger(IL_IMAGE_WIDTH);
+                    m_TextData.nHeight = ilGetInteger(IL_IMAGE_HEIGHT);
+
+                    unsigned int size = m_TextData.nWidth * m_TextData.nHeight * 4;
+                    m_TextData.pData = new unsigned char[size];
+                    ilCopyPixels(0, 0, 0, m_TextData.nWidth, m_TextData.nHeight,
+                        1, IL_RGBA, IL_UNSIGNED_BYTE, m_TextData.pData);
+                    // Finally, delete the DevIL image data.
+                    ilDeleteImage(imgId);
+                }
+
+                struct TextureData
+                {
+
+                    unsigned int   nWidth;
+
+                    unsigned int   nHeight;
+
+                    unsigned char* pData;
+                };
+
+                TextureData m_TextData;
+
+                mutable GLuint m_glId;
+
+                TextureHandle textureHandle;
+            };
+
+
+
             static void Square(int x, int y,size_t side, const AMLEngine::Colors::Color& color)
             {
                 float halfSide = side / 2;
@@ -439,6 +699,7 @@ namespace AMLEngine
 
                 glFlush();
             }
+
         };
         const Keyboard& getKeyboard() const
         {
