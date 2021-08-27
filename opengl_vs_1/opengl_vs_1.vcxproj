@@ -150,6 +150,8 @@
     <ClInclude Include="AMLEngine.h" />
     <ClInclude Include="Demos.h" />
     <ClInclude Include="snake.h" />
+    <ClInclude Include="snake_brain.h" />
+    <ClInclude Include="snake_scene.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

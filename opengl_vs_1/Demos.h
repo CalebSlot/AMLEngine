@@ -2,7 +2,8 @@
 #include "AMLEngine.h"
 #include <functional>
 #include <algorithm>
-#include "snake.h"
+//here my game scene
+#include "snake_scene.h"
 
 using namespace std::placeholders;
 class Demos

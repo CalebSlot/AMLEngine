@@ -32,5 +32,11 @@
     <ClInclude Include="snake.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
+    <ClInclude Include="snake_brain.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="snake_scene.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
