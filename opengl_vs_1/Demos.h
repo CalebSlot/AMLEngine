@@ -38,6 +38,7 @@ private:
         MINUS
     };
 
+    static const size_t MAX_SCENES = 100;
     //DEMOS VARIABLES
     float m_fSpeed_Circle                   = 2000.0f;
     float m_fSpeed_Zoom                     = 100.0f;
@@ -74,8 +75,14 @@ private:
     AMLEngine::Core::KeyboardInputHandlerPtr currentInputHandler;
     AMLEngine::Core::RenderHandlerPtr currentRenderHandler;
 
-   
+    AMLEngine::Core::KeyboardInputHandlerPtr v_i[MAX_SCENES];
+    AMLEngine::Core::RenderHandlerPtr        v_r[MAX_SCENES];
+    typedef std::function<void(AMLEngine::Core&)> CreatePtr;
+    CreatePtr v_c[MAX_SCENES];
+    SceneTypeID        v_s[MAX_SCENES];
 
+
+    size_t num_scenes;
 public:
 
 
@@ -96,8 +103,29 @@ public:
         ame.setFrameLimit(m_fLimit);
 
         ame.setErrorHandler(&errorHandler);
+
+
+
         ame.setInputHandler(std::bind(&Demos::processInputScenes, this, _1));
         ame.setRenderLoop(std::bind(&Demos::renderLoopScenes, this, _1));
+
+
+        num_scenes = 3;
+        v_s[0] = 3;
+        v_s[1] = 2;
+        v_s[2] = 3;
+        v_s[3] = 1;
+        //TODO:: add scene setups elsewere
+        v_c[3] = std::bind(&AMLEngine::Core::Scene<SnakeScene>::create, &m_oSnakeScene,_1);
+        v_i[3] = std::bind(&AMLEngine::Core::Scene<SnakeScene>::input, &m_oSnakeScene, _1);
+        v_r[3] = std::bind(&AMLEngine::Core::Scene<SnakeScene>::render, &m_oSnakeScene, _1);
+        v_c[1] = std::bind(&Demos::create, this, _1);
+        v_i[1] = std::bind(&Demos::processInputScene1, this, _1);
+        v_r[1] = std::bind(&Demos::renderLoopScene1, this, _1);
+        v_c[2] = std::bind(&Demos::create, this, _1);
+        v_i[2] = std::bind(&Demos::processInputScene2, this, _1);
+        v_r[2] = std::bind(&Demos::renderLoopScene2, this, _1);
+
 
         m_eSceneTypeID = NextScene(SceneTypeID(0));
 
@@ -117,7 +145,7 @@ private:
 
     }
 
-    void Render(AMLEngine::Core& ame)
+    void UpdateFrame(AMLEngine::Core& ame)
     {
         const auto fElapsed = m_oTimer.GetTime();
 
@@ -140,38 +168,13 @@ private:
 
     SceneTypeID NextScene(SceneTypeID currentScene)
     {
-       
-        SceneTypeID nextScene = 0;
+        SceneTypeID next = v_s[currentScene];
 
-        switch (currentScene)
-        {
-          case 0:
-          case 3:
-          {
-              m_oSnakeScene.create(ame);
-              currentInputHandler  = std::bind(&AMLEngine::Core::Scene<SnakeScene>::input, &m_oSnakeScene, _1);
-              currentRenderHandler = std::bind(&AMLEngine::Core::Scene<SnakeScene>::render, &m_oSnakeScene, _1);
-              nextScene = 1;
-          }
-          break;
-          case 1:
-          {
-         
-              currentInputHandler = std::bind(&Demos::processInputScene1, this, _1);
-              currentRenderHandler = std::bind(&Demos::renderLoopScene1, this, _1);
-              nextScene = 2;
-          }
-          break;
-          case 2:
-          {
-              currentInputHandler = std::bind(&Demos::processInputScene2, this, _1);
-              currentRenderHandler = std::bind(&Demos::renderLoopScene2, this, _1);
-              nextScene = 3;
-          }
-          break;
+        v_c[next](ame);
+        currentInputHandler  = v_i[next];
+        currentRenderHandler = v_r[next];
 
-        }
-        return nextScene;
+        return next;
     }
 
 
@@ -400,9 +403,13 @@ private:
 
     void renderLoopScenes(AMLEngine::Core& ame)
     {
-        Render(ame);
+        UpdateFrame(ame);
        
         currentRenderHandler(ame);
     }
    
+    void create(AMLEngine::Core& ame)
+    {
+
+    }
 };
