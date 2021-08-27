@@ -12,6 +12,9 @@ class Demos
 private:
 
    
+
+    typedef size_t SceneTypeID;
+
     enum class DrawColor
     {
         RED,
@@ -57,6 +60,7 @@ private:
     bool  m_bDrawPoints = true;
     bool  m_bRecalc = false;
 
+    SceneTypeID m_eSceneTypeID;
 
     AMLEngine::Core::Timer m_oTimer;
 
@@ -67,24 +71,10 @@ private:
     //Snake Scene
     AMLEngine::Core::Scene<SnakeScene> m_oSnakeScene;
 
-    //todo: move as engine funfuction or leave here as scenemanager (to build upon this demos class)
-    template <template <class> class S,class T>
-    void setRenderLoop(S<T>& scene)
-    {
-        
-        ame.setRenderLoop([this,&scene](AMLEngine::Core& core) 
-        {
-            this->switchScene(core,1);
-            scene.render(core);
-        });
+    AMLEngine::Core::KeyboardInputHandlerPtr currentInputHandler;
+    AMLEngine::Core::RenderHandlerPtr currentRenderHandler;
 
-    }
-    template <template <class> class S, class T>
-    void setInputHandler(S<T>& scene)
-    {
-        ame.setInputHandler(std::bind(&S<T>::input, &scene, _1));
-    }
-
+   
 
 public:
 
@@ -104,16 +94,15 @@ public:
     {
 
         ame.setFrameLimit(m_fLimit);
+
         ame.setErrorHandler(&errorHandler);
+        ame.setInputHandler(std::bind(&Demos::processInputScenes, this, _1));
+        ame.setRenderLoop(std::bind(&Demos::renderLoopScenes, this, _1));
 
-        m_oSnakeScene.create(ame);
-
-        setInputHandler(m_oSnakeScene);
-        setRenderLoop(m_oSnakeScene);
+        m_eSceneTypeID = NextScene(SceneTypeID(0));
 
         m_oTimer.GetTime();
 
-       
         ame.run();
     }
 
@@ -122,7 +111,13 @@ private:
     {
         std::cerr << "ERROR: " << eCode << " " << description;
     }
-    void switchScene(AMLEngine::Core& ame, size_t scene)
+
+    void Input(const AMLEngine::Core::Keyboard& keyboard)
+    {
+
+    }
+
+    void Render(AMLEngine::Core& ame)
     {
         const auto fElapsed = m_oTimer.GetTime();
 
@@ -133,31 +128,51 @@ private:
 
         if (m_fElapsed_0 >= 30)
         {
+
             m_fElapsed_0 = 0.0f;
             m_fElapsed_1 = 0.0f;
 
-            if (scene == 1)
-            {
-                ame.setRenderLoop(std::bind(&Demos::renderLoopScene1, this, _1));
-                ame.setInputHandler(std::bind(&Demos::processInputScene1, this, _1));
-            } else
-            if (scene == 2)
-            {
-                ame.setRenderLoop(std::bind(&Demos::renderLoopScene2, this, _1));
-                ame.setInputHandler(std::bind(&Demos::processInputScene2, this, _1));
-            } else
-            if (scene == 3)
-            {
-                m_oSnakeScene.create(ame);
-                setRenderLoop(m_oSnakeScene);
-                setInputHandler(m_oSnakeScene);
-            }
-        }
+            m_eSceneTypeID = NextScene(m_eSceneTypeID);
 
+            return;
+        }
     }
 
-    
-  
+    SceneTypeID NextScene(SceneTypeID currentScene)
+    {
+       
+        SceneTypeID nextScene = 0;
+
+        switch (currentScene)
+        {
+          case 0:
+          case 3:
+          {
+              m_oSnakeScene.create(ame);
+              currentInputHandler  = std::bind(&AMLEngine::Core::Scene<SnakeScene>::input, &m_oSnakeScene, _1);
+              currentRenderHandler = std::bind(&AMLEngine::Core::Scene<SnakeScene>::render, &m_oSnakeScene, _1);
+              nextScene = 1;
+          }
+          break;
+          case 1:
+          {
+         
+              currentInputHandler = std::bind(&Demos::processInputScene1, this, _1);
+              currentRenderHandler = std::bind(&Demos::renderLoopScene1, this, _1);
+              nextScene = 2;
+          }
+          break;
+          case 2:
+          {
+              currentInputHandler = std::bind(&Demos::processInputScene2, this, _1);
+              currentRenderHandler = std::bind(&Demos::renderLoopScene2, this, _1);
+              nextScene = 3;
+          }
+          break;
+
+        }
+        return nextScene;
+    }
 
 
     static bool compare(AMLEngine::FPosition3 a, AMLEngine::FPosition3 b) {
@@ -169,8 +184,6 @@ private:
 
     void renderLoopScene1(AMLEngine::Core& ame)
     {
-
-        switchScene(ame, 2);
 
         std::cout << ame.getFrameTime() << "\n";
 
@@ -261,10 +274,6 @@ private:
 
     void renderLoopScene2(AMLEngine::Core& ame)
     {
-
-     
-        switchScene(ame, 3);
-    
         std::cout << ame.getFrameTime() << "\n";
 
         AMLEngine::ISize size = ame.getWindowSize();
@@ -382,6 +391,18 @@ private:
     }
 
 
-   
+    void processInputScenes(const AMLEngine::Core::Keyboard& keyboard)
+    {
+        Input(keyboard);
+        
+        currentInputHandler(keyboard);
+    }
+
+    void renderLoopScenes(AMLEngine::Core& ame)
+    {
+        Render(ame);
+       
+        currentRenderHandler(ame);
+    }
    
 };
