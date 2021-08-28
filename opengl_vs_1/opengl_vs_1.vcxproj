@@ -127,7 +127,7 @@
       <AdditionalLibraryDirectories>..\..\librerie\glfw-3.3.4\build\src\Debug;..\..\librerie\DevIL\lib\x64\Debug</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy $(SolutionDir)risorse\apple_1.bmp $(TargetDir) /Y /E /D</Command>
+      <Command>for %%e in (bmp txt) do ( xcopy $(SolutionDir)risorse\*.%%e $(TargetDir) /Y /E /D )</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

@@ -1,0 +1,3 @@
+apple_1.bmp 255 255 255
+grass_1.bmp_1 0 128 128
+trees_1.bmp 191 123 199

@@ -51,13 +51,13 @@ private:
     AMLEngine::IPosition m_oIPosSnake;
     AMLEngine::IPosition m_oIPosSnakePrev;
     AMLEngine::IPosition m_vIPosSnake[100];
-    AMLEngine::Colors::Color m_oColorSnake;
+    AMLEngine::Colors::FColor3 m_oColorSnake;
     int m_iLenSnake;
     AMLEngine::ISize m_moveArea;
 
 public:
  
-    Snake(AMLEngine::IPosition startPosition,AMLEngine::ISize moveArea,AMLEngine::Colors::Color snakeColor,size_t startLen) : m_eDirectionSnake(Opcode::NONE)
+    Snake(AMLEngine::IPosition startPosition,AMLEngine::ISize moveArea,AMLEngine::Colors::FColor3 snakeColor,size_t startLen) : m_eDirectionSnake(Opcode::NONE)
     {
         m_eState = SnakeState::HOME;
         m_fElapsed = 0.0f;

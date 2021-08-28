@@ -8,6 +8,8 @@
 #include <chrono>
 #include <functional>
 #include <unordered_map>
+#include <fstream>
+#include <sstream>
 
 #define DEBUG
 
@@ -53,29 +55,107 @@ namespace AMLEngine
         float Y;
         float Z;
     };
-    struct Colors
+
+    namespace Colors
     {
-        typedef struct
+        struct FColor3
         {
             float r;
             float g;
             float b;
 
-        } Color;
+        };
 
-        const Color RED;
-        const Color GREEN;
-        const Color BLUE;
+        struct UCColor3
+        {
+            unsigned char r;
+            unsigned char g;
+            unsigned char b;
 
-        Colors() : RED{ 1,0,0 }, GREEN{ 0,1,0 },BLUE {0,0,1}
+        };
+        static const FColor3 RED = { 1,0,0 };
+        static const FColor3 GREEN = { 0,1,0 };
+        static const FColor3 BLUE = { 0,0,1 };
+
+    }
+    namespace Resources
+    {
+        class TransparencyInfoLoader
         {
 
-        }
+            struct TEntry
+            {
+                TEntry() : name(""), color({ 0,0,0 })
+                {
 
-    };
+                }
+                std::string name;
+                AMLEngine::Colors::UCColor3 color;
+            };
+
+        private:
+            size_t len;
+            std::vector<TEntry*> entries;
+        public:
+
+            TransparencyInfoLoader(std::string fileName) : len(0)
+            {
+                entries.reserve(10);
+
+                std::ifstream infile;
+
+                try
+                {
+                    infile.open(fileName);
+
+                    std::string tempString;
+
+                    TEntry tempEntry;
+                  
+                    while (std::getline(infile, tempString))
+                    {
+                        std::istringstream instringstream(tempString);
+
+                        int R, G, B;
+                        instringstream >> tempEntry.name >> R >> G >> B;
+
+                        tempEntry.color.r = R;
+                        tempEntry.color.g = G;
+                        tempEntry.color.b = B;
+
+                        entries.emplace_back(new TEntry(tempEntry));
+
+                        len++;
+                    }
+                }
+                catch (const std::ifstream::failure& e)
+                {
+
+                }
+
+                infile.close();
+
+            }
+
+            TEntry* Get(const std::string& search)
+            {
+
+                for (int i = 0;i < len;i++)
+                {
+                    if (entries[i]->name == search)
+                    {
+                        return entries[i];
+                    }
+                }
+            }
 
 
+        };
+    }
 
+   
+
+    
     class Core
     {
        class Keyboard;
@@ -143,12 +223,6 @@ namespace AMLEngine
             FPS_30,
             FPS_60
         };
-
-        static Colors& COLORS()
-        {
-            static Colors colors;
-            return colors;
-        }
 
         typedef GLFWwindow* GLFWwindowPtr;
         class Keyboard;
@@ -318,6 +392,7 @@ namespace AMLEngine
             // Sets the size of the OpenGL viewport
             glViewport(0, 0, width, height);
 
+            //set the camera matrix
             setupOrtho(width,height);
 
         }
@@ -507,7 +582,7 @@ namespace AMLEngine
                     return !(ID == 0 && HASH == 0);
                 }
 
-                void SetColorKey(unsigned char Red, unsigned char Green, unsigned char Blue) const 
+                void SetColorKey(AMLEngine::Colors::UCColor3 color) const 
                 {
                     Texture* t = TextureManager::GetInstance().GetTexture(*this);
 
@@ -516,7 +591,7 @@ namespace AMLEngine
                         return;
                     }
 
-                    t->SetColorKey(Red,Green,Blue);
+                    t->SetColorKey(color.r,color.g,color.b);
                 }
 
                 void Bind() const
@@ -642,7 +717,7 @@ namespace AMLEngine
                         
                         std::cout << ilGetError() << std::endl;
 #endif
-                       
+                        return;
                     }
 
                     // Store the data in our STextureData structure.
@@ -683,25 +758,29 @@ namespace AMLEngine
             {
             public:
                
-                void BlitImage(int iXOffset, int iYOffset) const
+                void BlitImage(int iXOffset, int iYOffset, const AMLEngine::Colors::FColor3& color = AMLEngine::Colors::FColor3{1,1,1}) const
                 {
                     if (m_oTextureHandle.Valid())
                     {
+                        //set the current texture
                         m_oTextureHandle.Bind();
 
                         // Get the coordinates of the image in the texture, expressed
                         // as a value from 0 to 1.
-                        float Top = ((float)m_rectTextCoord.TOP_LEFT.Y) / m_oTextureHandle.GetHeight();
+                        float Top    = ((float)m_rectTextCoord.TOP_LEFT.Y)     / m_oTextureHandle.GetHeight();
                         float Bottom = ((float)m_rectTextCoord.BOTTOM_RIGHT.Y) / m_oTextureHandle.GetHeight();
-                        float Left = ((float)m_rectTextCoord.TOP_LEFT.X) / m_oTextureHandle.GetWidth();
-                        float Right = ((float)m_rectTextCoord.BOTTOM_RIGHT.X) / m_oTextureHandle.GetWidth();
+                        float Left   = ((float)m_rectTextCoord.TOP_LEFT.X)     / m_oTextureHandle.GetWidth();
+                        float Right  = ((float)m_rectTextCoord.BOTTOM_RIGHT.X) / m_oTextureHandle.GetWidth();
 
                         // Draw the textured rectangle.
+                        // associate an uv coord to vertex coord, i'm working in MODEL space
+                        // then the point is moved in WORLD wspace by MODELVIEW matrix, then moved in SCREEN by PROJ matrix
+                        glColor3f(color.r,color.g,color.b);
                         glBegin(GL_QUADS);
                         glTexCoord2f(Left, Top);		glVertex3i(iXOffset, iYOffset, 0);
-                        glTexCoord2f(Left, Bottom);	glVertex3i(iXOffset, iYOffset + m_rectTextCoord.GetHeight(), 0);
+                        glTexCoord2f(Left, Bottom);  	glVertex3i(iXOffset, iYOffset + m_rectTextCoord.GetHeight(), 0);
                         glTexCoord2f(Right, Bottom);	glVertex3i(iXOffset + m_rectTextCoord.GetWidth(), iYOffset + m_rectTextCoord.GetHeight(), 0);
-                        glTexCoord2f(Right, Top);	glVertex3i(iXOffset + m_rectTextCoord.GetWidth(), iYOffset, 0);
+                        glTexCoord2f(Right, Top);	    glVertex3i(iXOffset + m_rectTextCoord.GetWidth(), iYOffset, 0);
                         glEnd();
                     }
                 }
@@ -755,7 +834,7 @@ namespace AMLEngine
 
 
             //SHAPES
-            static void Square(int x, int y,size_t side, const AMLEngine::Colors::Color& color)
+            static void Square(int x, int y,size_t side, const AMLEngine::Colors::FColor3& color = AMLEngine::Colors::FColor3{ 1,1,1 })
             {
                 float halfSide = side / 2;
                 glColor3f(color.r, color.g, color.b);
@@ -766,7 +845,7 @@ namespace AMLEngine
                     glVertex2f(x + halfSide, y- halfSide);
                 glEnd();
             }
-            static void Circle(int x, int y, size_t radius, const AMLEngine::Colors::Color& color)
+            static void Circle(int x, int y, size_t radius, const AMLEngine::Colors::FColor3& color = AMLEngine::Colors::FColor3{ 1,1,1 })
             {
                 float theta;
 
@@ -783,7 +862,7 @@ namespace AMLEngine
                 glEnd();
               //  glFlush();
             }
-            static void Curve(AMLEngine::FPosition3* positions,size_t numPoints,size_t numPoints_subCurve,size_t interp_steps, const AMLEngine::Colors::Color& color,size_t connect_prevs = 0,bool draw_points = false,float point_size = 5.0f)
+            static void Curve(AMLEngine::FPosition3* positions,size_t numPoints,size_t numPoints_subCurve,size_t interp_steps, const AMLEngine::Colors::FColor3& color = AMLEngine::Colors::FColor3{ 1,1,1 },size_t connect_prevs = 0,bool draw_points = false,float point_size = 5.0f)
             {
                 
                 const float f_interp_steps = (float)interp_steps;
@@ -884,7 +963,7 @@ namespace AMLEngine
             return m_durationFrameLoop;
         }
 
-        void setClearColor(AMLEngine::Colors::Color color)
+        void setClearColor(AMLEngine::Colors::FColor3 color)
         {
             // Set the clear color to black
             glClearColor((GLfloat)color.r, (GLfloat)color.g ,(GLfloat)color.b, 0.0);
@@ -972,12 +1051,10 @@ namespace AMLEngine
 
                 };
             }
+
             //TODO: add fixed pipe or shader
-            setupOrtho(SCR_WIDTH,SCR_HEIGHT);
-
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-             //main loop
+             setupOrtho(SCR_WIDTH,SCR_HEIGHT);
+            //main loop
 
 
             //TODO:: add different paths on different configurations (different whiless.)
@@ -1079,10 +1156,8 @@ namespace AMLEngine
                     }
 
                     //render
-                    // ------
-                    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-                    glClear(GL_COLOR_BUFFER_BIT);
 
+                    glClear(GL_COLOR_BUFFER_BIT);
 
                     if (m_durationFrameLoop >= renderLimit)
                     {

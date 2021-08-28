@@ -243,13 +243,13 @@ private:
         switch (m_eDrawColor)
         {
         case DrawColor::RED:
-            AMLEngine::Core::Draw::Circle(m_oIPosCircle.X, m_oIPosCircle.Y, m_fRadius, AMLEngine::Core::COLORS().RED);
+            AMLEngine::Core::Draw::Circle(m_oIPosCircle.X, m_oIPosCircle.Y, m_fRadius, AMLEngine::Colors::RED);
             break;
         case DrawColor::GREEN:
-            AMLEngine::Core::Draw::Circle(m_oIPosCircle.X, m_oIPosCircle.Y, m_fRadius, AMLEngine::Core::COLORS().GREEN);
+            AMLEngine::Core::Draw::Circle(m_oIPosCircle.X, m_oIPosCircle.Y, m_fRadius, AMLEngine::Colors::GREEN);
             break;
         case DrawColor::BLUE:
-            AMLEngine::Core::Draw::Circle(m_oIPosCircle.X, m_oIPosCircle.Y, m_fRadius, AMLEngine::Core::COLORS().BLUE);
+            AMLEngine::Core::Draw::Circle(m_oIPosCircle.X, m_oIPosCircle.Y, m_fRadius, AMLEngine::Colors::BLUE);
             break;
         }
 
@@ -272,7 +272,7 @@ private:
             m_bRecalc = false;
         }
         
-        AMLEngine::Core::Draw::Curve(m_vFPosControlPoints,m_iNumPoints, m_iPoints_subcurve,m_fInterp_steps,AMLEngine::Core::COLORS().BLUE, m_iConnect_prevs,true,m_fPointSize);
+        AMLEngine::Core::Draw::Curve(m_vFPosControlPoints,m_iNumPoints, m_iPoints_subcurve,m_fInterp_steps,AMLEngine::Colors::BLUE, m_iConnect_prevs,true,m_fPointSize);
     }
 
     void renderLoopScene2(AMLEngine::Core& ame)
@@ -299,15 +299,15 @@ private:
                 switch (m_eDrawColor)
                 {
                 case DrawColor::RED:
-                    AMLEngine::Core::Draw::Square(xPos, yPos, diameter, AMLEngine::Core::COLORS().RED);
+                    AMLEngine::Core::Draw::Square(xPos, yPos, diameter, AMLEngine::Colors::RED);
                     m_eDrawColor = DrawColor::GREEN;
                     break;
                 case DrawColor::GREEN:
-                    AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Core::COLORS().GREEN);
+                    AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Colors::GREEN);
                     m_eDrawColor = DrawColor::BLUE;
                     break;
                 case DrawColor::BLUE:
-                    AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Core::COLORS().BLUE);
+                    AMLEngine::Core::Draw::Circle(xPos, yPos, radius, AMLEngine::Colors::BLUE);
                     m_eDrawColor = DrawColor::RED;
                     break;
                 }
