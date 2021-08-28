@@ -124,8 +124,11 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>DevIL.lib;glfw3.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\librerie\glfw-3.3.4\build\src\Debug;..\..\librerie\DevIL\lib\x64\Release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\librerie\glfw-3.3.4\build\src\Debug;..\..\librerie\DevIL\lib\x64\Debug</AdditionalLibraryDirectories>
     </Link>
+    <PreBuildEvent>
+      <Command>xcopy $(SolutionDir)risorse\apple_1.bmp $(TargetDir) /Y /E /D</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

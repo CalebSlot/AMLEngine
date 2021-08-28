@@ -113,6 +113,8 @@ public:
 
     void Render()
     {
+        
+
         int side = m_moveArea.HEIGHT / 64;
 
         for (int i = 0;i < m_iLenSnake;i++)

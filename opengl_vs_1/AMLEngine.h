@@ -9,7 +9,7 @@
 #include <functional>
 #include <unordered_map>
 
-
+#define DEBUG
 
 namespace AMLEngine
 {
@@ -26,7 +26,7 @@ namespace AMLEngine
         int X;
         int Y;
 
-        bool operator == (const IPosition& other)
+        bool operator == (const IPosition& other) const
         {
             if (&other == this)
             {
@@ -36,6 +36,17 @@ namespace AMLEngine
         }
 
     };
+
+    struct IRectangle
+    {
+        IPosition TOP_LEFT;
+        IPosition BOTTOM_RIGHT;
+        
+        int GetWidth()  const { return BOTTOM_RIGHT.X - TOP_LEFT.X; }
+     
+        int GetHeight() const { return BOTTOM_RIGHT.Y - TOP_LEFT.Y; }
+    };
+
     struct FPosition3
     {
         float X;
@@ -302,11 +313,13 @@ namespace AMLEngine
         {
             // make sure the viewport matches the new window dimensions; note that width and 
             // height will be significantly larger than specified on retina displays.
+           
+
+            // Sets the size of the OpenGL viewport
+            glViewport(0, 0, width, height);
 
             setupOrtho(width,height);
 
-
-            glViewport(0, 0, width, height);
         }
         static void error_callback(int error, const char* description)
         {
@@ -315,13 +328,18 @@ namespace AMLEngine
 
         static void setupOrtho(int width,int height)
         {
+            //PROJECTION MATRIX
             glMatrixMode(GL_PROJECTION);
             glLoadIdentity();
             glOrtho(0.0f, width, height, 0.0f, 0.0f, 1.0f);
+
+            //MODELVIEW
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
         }
 
-    public:
-
+    public
+        :
        
 
         void renderFallback(AMLEngine::Core& core)
@@ -374,6 +392,7 @@ namespace AMLEngine
             class Texture;
             class TextureHandle;
             
+        private:
             class TextureManager
             {
                 friend class TextureHandle;
@@ -395,16 +414,18 @@ namespace AMLEngine
                     // upper-left corner.
                     ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
                     ilEnable(IL_ORIGIN_SET);
+
+                   
                 }
 
                 Texture* GetTexture(const TextureHandle& handle)
                 {
-                    if (texturesStorage.size() < handle.ID)
+                    if (!handle.Valid() || texturesStorage.size() < handle.ID)
                     {
                         return nullptr;
                     }
 
-                    Texture* tex = texturesStorage[handle.ID];
+                    Texture* tex = texturesStorage[handle.ID - 1];
 
                     return handle == tex->textureHandle ? tex : nullptr;
                 }
@@ -434,7 +455,7 @@ namespace AMLEngine
                     Texture* tempT = new Texture(strTextName);
                     TextureHandle handle = tempT->textureHandle;
 
-                    if (tempT->m_TextData.pData != nullptr)
+                    if (tempT->m_TextData.pData == nullptr)
                     {
                         tempT = nullptr;
                     }
@@ -455,6 +476,8 @@ namespace AMLEngine
                     return handle;
                 }
             };
+
+        public:
 
             class TextureHandle
             {
@@ -484,7 +507,7 @@ namespace AMLEngine
                     return !(ID == 0 && HASH == 0);
                 }
 
-                void SetColorKey(unsigned char Red, unsigned char Green, unsigned char Blue)
+                void SetColorKey(unsigned char Red, unsigned char Green, unsigned char Blue) const 
                 {
                     Texture* t = TextureManager::GetInstance().GetTexture(*this);
 
@@ -495,9 +518,10 @@ namespace AMLEngine
 
                     t->SetColorKey(Red,Green,Blue);
                 }
-                void Bind()
+
+                void Bind() const
                 {
-                    Texture* t = TextureManager::GetInstance().GetTexture(*this);
+                   const Texture* t = TextureManager::GetInstance().GetTexture(*this);
 
                     if (t == nullptr)
                     {
@@ -505,6 +529,30 @@ namespace AMLEngine
                     }
 
                     t->Bind();
+                }
+
+                size_t GetWidth() const
+                {
+                    const Texture* t = TextureManager::GetInstance().GetTexture(*this);
+
+                    if (t == nullptr)
+                    {
+                        return 0;
+                    }
+
+                    return t->GetWidth();
+                }
+
+                size_t GetHeight() const
+                {
+                    const Texture* t = TextureManager::GetInstance().GetTexture(*this);
+
+                    if (t == nullptr)
+                    {
+                        return 0;
+                    }
+
+                    return t->GetHeight();
                 }
             };
 
@@ -525,9 +573,6 @@ namespace AMLEngine
                 }
                 void SetColorKey(unsigned char Red, unsigned char Green, unsigned char Blue)
                 {
-
-
-
                     if (m_glId)
                     {
                         glDeleteTextures(1, &m_glId);
@@ -589,10 +634,15 @@ namespace AMLEngine
                     ilGenImages(1, &imgId);
                     ilBindImage(imgId);
 
+                    
                     // Load the file data in the current image.
                     if (!ilLoadImage(strFileName.c_str()))
                     {
-                        return;
+#ifdef DEBUG
+                        
+                        std::cout << ilGetError() << std::endl;
+#endif
+                       
                     }
 
                     // Store the data in our STextureData structure.
@@ -625,7 +675,86 @@ namespace AMLEngine
             };
 
 
+            class Image;
 
+            typedef std::shared_ptr<Image> ImagePtr;
+
+            class Image
+            {
+            public:
+               
+                void BlitImage(int iXOffset, int iYOffset) const
+                {
+                    if (m_oTextureHandle.Valid())
+                    {
+                        m_oTextureHandle.Bind();
+
+                        // Get the coordinates of the image in the texture, expressed
+                        // as a value from 0 to 1.
+                        float Top = ((float)m_rectTextCoord.TOP_LEFT.Y) / m_oTextureHandle.GetHeight();
+                        float Bottom = ((float)m_rectTextCoord.BOTTOM_RIGHT.Y) / m_oTextureHandle.GetHeight();
+                        float Left = ((float)m_rectTextCoord.TOP_LEFT.X) / m_oTextureHandle.GetWidth();
+                        float Right = ((float)m_rectTextCoord.BOTTOM_RIGHT.X) / m_oTextureHandle.GetWidth();
+
+                        // Draw the textured rectangle.
+                        glBegin(GL_QUADS);
+                        glTexCoord2f(Left, Top);		glVertex3i(iXOffset, iYOffset, 0);
+                        glTexCoord2f(Left, Bottom);	glVertex3i(iXOffset, iYOffset + m_rectTextCoord.GetHeight(), 0);
+                        glTexCoord2f(Right, Bottom);	glVertex3i(iXOffset + m_rectTextCoord.GetWidth(), iYOffset + m_rectTextCoord.GetHeight(), 0);
+                        glTexCoord2f(Right, Top);	glVertex3i(iXOffset + m_rectTextCoord.GetWidth(), iYOffset, 0);
+                        glEnd();
+                    }
+                }
+               
+                const TextureHandle& GetTextureHandle() const { return m_oTextureHandle; }
+
+                static ImagePtr CreateImage(const std::string& strFileName)
+                {
+                    ImagePtr imgPtr(new Image(strFileName));
+                    return imgPtr;
+                }
+
+                static ImagePtr CreateImage(const std::string& strFileName,
+                    const IRectangle& textCoord)
+                {
+                        ImagePtr imgPtr(new Image(strFileName, textCoord));
+                        return imgPtr;
+                   
+                }
+
+                ~Image()
+                {
+
+                }
+                
+            protected:
+               
+                Image(const std::string& strFileName)
+                {
+                    m_oTextureHandle = TextureManager::GetInstance().GetTextureHandle(strFileName);
+
+                    m_rectTextCoord.TOP_LEFT.Y = m_rectTextCoord.TOP_LEFT.X = 0;
+
+                    m_rectTextCoord.BOTTOM_RIGHT.Y = m_oTextureHandle.GetHeight();
+
+                    m_rectTextCoord.BOTTOM_RIGHT.X = m_oTextureHandle.GetWidth();
+                }
+                Image(const std::string& strFileName, const IRectangle& textCoord):
+                    m_rectTextCoord(textCoord)
+                {
+              
+                    m_oTextureHandle = TextureManager::GetInstance().GetTextureHandle(strFileName);
+                }
+
+            private:
+              
+                mutable TextureHandle m_oTextureHandle;
+                
+                IRectangle m_rectTextCoord;
+            };
+
+
+            //SHAPES
             static void Square(int x, int y,size_t side, const AMLEngine::Colors::Color& color)
             {
                 float halfSide = side / 2;
@@ -754,6 +883,67 @@ namespace AMLEngine
         {
             return m_durationFrameLoop;
         }
+
+        void setClearColor(AMLEngine::Colors::Color color)
+        {
+            // Set the clear color to black
+            glClearColor((GLfloat)color.r, (GLfloat)color.g ,(GLfloat)color.b, 0.0);
+
+        }
+        void enableTexturing()
+        {
+            // Enable 2D texturing
+            glEnable(GL_TEXTURE_2D);
+          
+        }
+        void disableTexturing()
+        {
+            
+            glDisable(GL_TEXTURE_2D);
+
+        }
+        void enableShadeModeSmooth()
+        {
+
+            glShadeModel(GL_SMOOTH);
+          
+        }
+        void enableShadeModeFlat()
+        {
+           
+            glShadeModel(GL_FLAT);
+
+        }
+        enum class ALPHA_FUN
+        {
+            LESS = GL_LESS
+            ,
+
+            LEQUAL = GL_LEQUAL
+            ,
+
+            GREATER = GL_GREATER
+            ,
+
+            NOTEQUAL = GL_NOTEQUAL
+            ,
+
+            GEQUAL = GL_GEQUAL
+            ,
+
+            ALWAYS = GL_ALWAYS
+        };
+
+        void enableAlphaTest(ALPHA_FUN eALPHA_FUN,float value = 0.0f)
+        {
+            glEnable(GL_ALPHA_TEST);
+            glAlphaFunc(static_cast<GLenum>(eALPHA_FUN), value);
+        }
+        void disableAlphaTest()
+        {
+            glDisable(GL_ALPHA_TEST);
+           
+        }
         void run()
         {
             //precondition
@@ -784,6 +974,9 @@ namespace AMLEngine
             }
             //TODO: add fixed pipe or shader
             setupOrtho(SCR_WIDTH,SCR_HEIGHT);
+
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
              //main loop
 
 
@@ -826,7 +1019,7 @@ namespace AMLEngine
 
                     // render
                     // ------
-                    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+                   
                     glClear(GL_COLOR_BUFFER_BIT);
 
                     renderHandlerPtr(*this);
