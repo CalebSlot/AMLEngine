@@ -178,11 +178,11 @@ private:
 
         if (next == 3)
         {
-            ame.setUpdateHandler(std::bind(&AMLEngine::Core::Scene<SnakeScene>::update, &m_oSnakeScene));
+            ame.setUpdateHandler(std::bind(&AMLEngine::Core::Scene<SnakeScene>::update, &m_oSnakeScene,_1));
         }
         else
         {
-            ame.setUpdateHandler([]() {
+            ame.setUpdateHandler([](float deltaTime) {
 
             });
         }

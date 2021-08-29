@@ -8,7 +8,7 @@ class SnakeScene
 
 private:
 
-    const std::string apple_file = "apple_1.bmp";
+    const std::string apple_file        = "apple_1.bmp";
     const std::string transparency_file = "transparency.txt";
 
     std::unique_ptr<Snake<BrainSnake1>> m_oSnake;
@@ -72,7 +72,16 @@ protected:
        
         fruit    = AMLEngine::Core::Draw::Image::CreateImage(apple_file);
         //set white color to be full transparent (set thr color.alpha channel to 1.0)
-        fruit->GetTextureHandle().SetColorKey(trans.Get(apple_file)->color);
+        
+        AMLEngine::Resources::TransparencyInfoLoader::TEntry* tEntry = trans.Get(apple_file);
+        if (tEntry == nullptr)
+        {
+            std::cout << " canno't load " << apple_file << " informations";
+        }
+        else
+        {
+            fruit->GetTextureHandle().SetColorKey(tEntry->color);
+        }
 
         fruitSize.WIDTH  = static_cast<int>(fruit->GetTextureHandle().GetWidth());
         fruitSize.HEIGHT = static_cast<int>(fruit->GetTextureHandle().GetHeight());
@@ -226,9 +235,11 @@ protected:
     bool m_collisionFruitStay  = false;
     bool m_collisionFruitExit  = false;
     //Fixded step update
-    void OnUpdate()
+    void OnUpdate(float deltaTime)
     {
         
+        std::cout << " integration step : " << deltaTime << "\n";
+
          if (m_oSnakeCollider.Intersect(m_oFruitCollider))
          {
              if (!m_collisionFruitEnter && !m_collisionFruitStay)

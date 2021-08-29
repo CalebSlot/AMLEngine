@@ -248,11 +248,112 @@ namespace AMLEngine
         }
     }
 
+
+    namespace Memory
+    {   
+        template<class T>
+        class PoolAllocator 
+        {
+        public:
+            class Chunk;
+            PoolAllocator(size_t chunksPerBlock)
+                : mChunksPerBlock(chunksPerBlock) {}
+
+            void* allocate(size_t size)
+            {
+                
+                if (mAlloc == nullptr) 
+                {
+                    mAlloc = allocateBlock(size);
+                }
+
+                Chunk* freeChunk = mAlloc;
+
+                //the new head is the next
+                mAlloc = mAlloc->next;
+
+                return freeChunk;
+
+            }
+          
+            void deallocate(void* chunk, size_t size) {
+
+                //now the last released memory point to the previously first available
+                reinterpret_cast<Chunk*>(chunk)->next = mAlloc;
+                //the new head is the last freed
+                mAlloc = reinterpret_cast<Chunk*>(chunk);
+            }
+
+
+        private:
+
+           
+
+            Chunk* allocateBlock(size_t chunkSize,size_t alignement = alignof(T))
+            {
+             
+                size_t blockSize   = mChunksPerBlock * chunkSize;
+                size_t sz = blockSize + sizeof(T);
+
+                void * memoryBlock = malloc(sz);
+
+                if (memoryBlock == nullptr)
+                {
+                    return nullptr;
+                }
+                if (!std::align(alignement, sizeof(T), memoryBlock, sz))
+                {
+                    free(memoryBlock);
+                    return nullptr;
+                }
+
+                T* result = reinterpret_cast<T*>(memoryBlock);
+                memoryBlock = (char*)memoryBlock + sizeof(T);
+
+                sz -= sizeof(T);
+
+                std::cout << "initial size request" << blockSize << " obtained "<< sz <<"\n";
+
+                Chunk* blockBegin = reinterpret_cast<Chunk*>(memoryBlock);
+                Chunk* chunk     = blockBegin;
+
+                for (int i = 0; i < mChunksPerBlock - 1; ++i) 
+                {
+                    chunk->next =
+                        reinterpret_cast<Chunk*>(reinterpret_cast<char*>(chunk) + chunkSize);
+                    chunk = chunk->next;
+                }
+
+                chunk->next = nullptr;
+
+                return blockBegin;
+            }
+
+
+            size_t mChunksPerBlock;
+
+            Chunk* mAlloc = nullptr;
+      
+            //pointer to a free block
+            struct Chunk
+            {
+                Chunk* next;
+            };
+        };
+
+    };
+
     namespace Resources
     {
         class TransparencyInfoLoader
         {
 
+           
+           class  TEntry;
+        private:
+            size_t len;
+            std::vector<TEntry*> entries;
+        public:
             struct TEntry
             {
                 TEntry() : name(""), color({ 0,0,0 })
@@ -262,12 +363,6 @@ namespace AMLEngine
                 std::string name;
                 AMLEngine::Colors::UCColor3 color;
             };
-
-        private:
-            size_t len;
-            std::vector<TEntry*> entries;
-        public:
-
             TransparencyInfoLoader(std::string fileName) : len(0)
             {
                 entries.reserve(10);
@@ -317,15 +412,15 @@ namespace AMLEngine
                         return entries[i];
                     }
                 }
+
+                return nullptr;
             }
 
 
         };
     }
 
-   
 
-    
     class Core
     {
        class Keyboard;
@@ -350,9 +445,9 @@ namespace AMLEngine
             {
                 this->OnRender(oCore);
             }
-            void update()
+            void update(float deltaTime)
             {
-                this->OnUpdate();
+                this->OnUpdate(deltaTime);
             }
             void input(const AMLEngine::Core::Keyboard& oKeyboard)
             {
@@ -399,7 +494,7 @@ namespace AMLEngine
 
         typedef std::function<void(const Keyboard&)> KeyboardInputHandlerPtr;
         typedef std::function<void(Core&)> RenderHandlerPtr;
-        typedef std::function<void(void)> UpdateHandlerPtr;
+        typedef std::function<void(float)> UpdateHandlerPtr;
 
        // typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
        // typedef void (*RenderHandlerPtr)(Core&);
@@ -489,6 +584,7 @@ namespace AMLEngine
         std::exception initException;
         DurationSeconds  m_durationMainLoop;
         DurationFloat m_durationFrameLoop;
+        DurationFloat m_integrationStep;
         Keyboard keyboard;
 
 
@@ -647,6 +743,7 @@ namespace AMLEngine
 
                 typedef std::unordered_map<size_t, TextureHandle> TMap;
                 typedef std::vector<Texture*> TVector;
+               
                 TMap       texturesHandles;
                 TVector    texturesStorage;
 
@@ -660,7 +757,7 @@ namespace AMLEngine
                     ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
                     ilEnable(IL_ORIGIN_SET);
 
-                   
+                   // AMLEngine::Memory::PoolAllocator< Object::allocator{ 8 };
                 }
 
                 Texture* GetTexture(const TextureHandle& handle)
@@ -674,19 +771,30 @@ namespace AMLEngine
 
                     return handle == tex->textureHandle ? tex : nullptr;
                 }
+               
 
+               
+                static const size_t initial_size = 10;
+               
             public:
    
-
+                
                 static TextureManager& GetInstance()
                 {
                     // Returns the unique class instance.
+
+
                     static TextureManager Instance;
-                
+                    
+
                     return Instance;
                 }
-
-              
+               
+                static AMLEngine::Memory::PoolAllocator<Texture>& GetTextureAllocator()
+                {
+                    static AMLEngine::Memory::PoolAllocator<Texture> textureAllocator{ initial_size };
+                    return textureAllocator;
+                }
 
                 TextureHandle GetTextureHandle(const std::string& strTextName)
                 {
@@ -702,6 +810,7 @@ namespace AMLEngine
 
                     if (tempT->m_TextData.pData == nullptr)
                     {
+                        delete tempT;
                         tempT = nullptr;
                     }
 
@@ -807,7 +916,6 @@ namespace AMLEngine
                 friend class TextureHandle;
 
             private:
-
                 unsigned int GetWidth()  const { return m_TextData.nWidth; }
 
                 unsigned int GetHeight() const { return m_TextData.nHeight; }
@@ -871,6 +979,18 @@ namespace AMLEngine
                     LoadFile(strFileName);
 
                 }
+
+                static void* operator new(size_t size) 
+                {
+                    return TextureManager::GetTextureAllocator().allocate(size);
+                }
+
+                static void operator delete(void* ptr, size_t size) 
+                {
+                    return TextureManager::GetTextureAllocator().deallocate(ptr, size);
+                }
+
+
 
                 void LoadFile(const std::string& strFileName)
                 {
@@ -955,7 +1075,10 @@ namespace AMLEngine
                     }
                 }
                
-                const TextureHandle& GetTextureHandle() const { return m_oTextureHandle; }
+                const TextureHandle& GetTextureHandle() const 
+                { 
+                    return m_oTextureHandle; 
+                }
 
                 static ImagePtr CreateImage(const std::string& strFileName)
                 {
@@ -1132,7 +1255,11 @@ namespace AMLEngine
         {
             return m_durationFrameLoop;
         }
-
+        const DurationFloat getIntegrationTime() const
+        {
+            return m_integrationStep;
+        }
+        
         void setClearColor(AMLEngine::Colors::FColor3 color) const
         {
             // Set the clear color to black
@@ -1219,7 +1346,7 @@ namespace AMLEngine
             }
             if (!updateHandlerPtr)
             {
-                updateHandlerPtr = []() {
+                updateHandlerPtr = [](const float deltaTime) {
 
                 };
             }
@@ -1234,8 +1361,8 @@ namespace AMLEngine
             //FREE PFS
 
             float counter = 0.0f;
-            float fixedDt = 0.003f;
-
+            float fixedDt = FPS_60;
+           
             if (m_eRenderLimit == FrameLimit::NONE)
             {
                 auto m_BeginFrame = std::chrono::high_resolution_clock::now();
@@ -1260,7 +1387,8 @@ namespace AMLEngine
                     size_t steps = 0;
                     while (counter >= fixedDt)
                     {
-                        updateHandlerPtr();
+                        m_integrationStep = counter / fixedDt;
+                        updateHandlerPtr(m_integrationStep);
 
                         counter -= fixedDt;
                         steps++;
@@ -1284,6 +1412,7 @@ namespace AMLEngine
             else
             {
                 double renderLimit = FPS_60;
+               
 
                 switch(m_eRenderLimit)
                 { 
@@ -1294,7 +1423,9 @@ namespace AMLEngine
                     renderLimit = FPS_60;
                     break;
                 }
-            
+
+                fixedDt = renderLimit / 4;
+
                 auto m_BeginTime     = std::chrono::high_resolution_clock::now();
                 auto m_EndTime       = m_BeginTime;
                 auto m_LastFrameTime = m_BeginTime;
@@ -1321,10 +1452,13 @@ namespace AMLEngine
                     size_t steps = 0;
                     while (counter >= fixedDt)
                     {
-                        updateHandlerPtr();
+
+                        m_integrationStep = counter / renderLimit;
+                        updateHandlerPtr(m_integrationStep);
 
                         counter -= fixedDt;
                         steps++;
+
                     }
 
                     //render
@@ -1333,7 +1467,7 @@ namespace AMLEngine
 
                     if (m_durationFrameLoop >= renderLimit)
                     {
-
+                       
                         renderHandlerPtr(*this);
                         //glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
                         // -------------------------------------------------------------------------------
