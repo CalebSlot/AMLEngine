@@ -145,6 +145,8 @@ private:
 
     }
 
+    const float m_fNextScene = 240.0f;
+
     void UpdateFrame(AMLEngine::Core& ame)
     {
         const auto fElapsed = m_oTimer.GetTime();
@@ -154,7 +156,7 @@ private:
 
         std::cout << m_fElapsed_0 << " ";
 
-        if (m_fElapsed_0 >= 30)
+        if (m_fElapsed_0 >= m_fNextScene)
         {
 
             m_fElapsed_0 = 0.0f;
@@ -173,6 +175,17 @@ private:
         v_c[next](ame);
         currentInputHandler  = v_i[next];
         currentRenderHandler = v_r[next];
+
+        if (next == 3)
+        {
+            ame.setUpdateHandler(std::bind(&AMLEngine::Core::Scene<SnakeScene>::update, &m_oSnakeScene));
+        }
+        else
+        {
+            ame.setUpdateHandler([]() {
+
+            });
+        }
 
         return next;
     }

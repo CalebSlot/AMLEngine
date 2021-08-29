@@ -32,7 +32,6 @@ public:
             return opcodes[index];
         }
     };
-private:
     enum class SnakeState
     {
         HOME,
@@ -41,33 +40,51 @@ private:
         MOVED,
         COLLIDED_AREA,
         COLLIDED_BODY,
-        COLLIDED_ITEM
+        EATING_FRUIT,
+        GROWING_1,
+        GROWED
     };
+private:
+
 
     Opcode m_eDirectionSnake;
     SnakeState m_eState;
+    SnakeState m_eStatePrev;
     float m_fElapsed;
     float m_fSpeed_Snake;
+
     AMLEngine::IPosition m_oIPosSnake;
     AMLEngine::IPosition m_oIPosSnakePrev;
-    AMLEngine::IPosition m_vIPosSnake[100];
+    AMLEngine::IPosition m_oIPosSnakeForw;
+    AMLEngine::IPosition m_vIPosSnake[1000];
+
     AMLEngine::Colors::FColor3 m_oColorSnake;
     int m_iLenSnake;
     AMLEngine::ISize m_moveArea;
 
 public:
- 
+
+    SnakeState GetState() const
+    {
+        return m_eStatePrev;
+    }
+    void SetState(SnakeState state)
+    {
+        m_eStatePrev = m_eState;
+        m_eState     = state;
+    }
     Snake(AMLEngine::IPosition startPosition,AMLEngine::ISize moveArea,AMLEngine::Colors::FColor3 snakeColor,size_t startLen) : m_eDirectionSnake(Opcode::NONE)
     {
-        m_eState = SnakeState::HOME;
+        m_eState     = SnakeState::HOME;
+        m_eStatePrev = m_eState;
+
         m_fElapsed = 0.0f;
-        m_fSpeed_Snake = 0.2f;
+        m_fSpeed_Snake = 0.15f;
         m_oIPosSnake  = startPosition;
         m_oIPosSnakePrev = startPosition;
         m_oColorSnake = snakeColor;
         m_iLenSnake = startLen;
         m_moveArea = moveArea;
-       
 
         for (int i = 0;i < m_iLenSnake;i++)
         {
@@ -80,7 +97,23 @@ public:
         m_moveArea = moveArea;
     }
   
- 
+    void Update()
+    {
+        SnakeState previousState = m_eState;
+        SnakeState nextState = m_eState;
+
+        do
+        {
+            nextState = Brain::Update(*this, previousState);
+
+            previousState = m_eState;
+
+            m_eState = nextState;
+        } while
+            (nextState != SnakeState::THINKING);
+
+        m_eStatePrev = previousState;
+    }
 
     void Update(float deltaTime)
     {
@@ -88,19 +121,7 @@ public:
        
         if (m_fElapsed >= m_fSpeed_Snake)
         {
-            SnakeState previousState = m_eState;
-            SnakeState nextState     = m_eState;
-
-            //here i execute the FSM
-            do 
-            {
-                nextState = Brain::Update(*this, previousState);
-
-                previousState = m_eState;
-                m_eState = nextState;
-            } 
-            while 
-                (nextState != SnakeState::THINKING);
+            Update();
 
             m_fElapsed = 0.0f;
         }
@@ -109,6 +130,20 @@ public:
     void Input(const Command& directions)
     {
         Brain::Input(*this, directions);
+    }
+
+    AMLEngine::ISize GetHeadSize() const
+    {
+        int side = m_moveArea.HEIGHT / 64;
+        return { side ,side };
+    }
+    const AMLEngine::ISize& GetMoveArea() const
+    {
+        return m_moveArea;
+    }
+    const AMLEngine::IPosition&  GetHeadPosition() const
+    {
+        return m_oIPosSnake;
     }
 
     void Render()

@@ -21,6 +21,62 @@ namespace AMLEngine
     {
         int WIDTH;
         int HEIGHT;
+
+
+        void operator -= (const ISize& other)
+        {
+            WIDTH -= other.WIDTH;
+            HEIGHT -= other.WIDTH;
+        }
+        void operator += (const ISize& other)
+        {
+            WIDTH += other.WIDTH;
+            HEIGHT += other.WIDTH;
+        }
+        void operator += (int size)
+        {
+            WIDTH  += size;
+            HEIGHT += size;
+        }
+      
+        void operator -= (int size)
+        {
+            WIDTH -= size;
+            HEIGHT -= size;
+        }
+
+        ISize operator -= (int size) const
+        {
+            ISize isize = *this;
+            isize -= size;
+            return isize;
+        }
+
+        void operator /= (int size)
+        {
+            WIDTH /= size;
+            HEIGHT /= size;
+        }
+        void operator *= (int size)
+        {
+            WIDTH *= size;
+            HEIGHT *= size;
+        }
+
+        ISize operator / (int size) const
+        {
+            ISize isize;
+            isize.WIDTH  =  WIDTH / size;
+            isize.HEIGHT = HEIGHT / size;
+            return isize;
+        }
+        ISize operator * (int size) const
+        {
+            ISize isize;
+            isize.WIDTH = WIDTH * size;
+            isize.HEIGHT = HEIGHT * size;
+            return isize;
+        }
     };
 
     struct IPosition
@@ -36,7 +92,38 @@ namespace AMLEngine
             }
             return other.X == X && other.Y == Y;
         }
+        void operator = (const IPosition& other) 
+        {
+            if (&other == this)
+            {
+                return;
+            }
 
+            X = other.X;
+            Y = other.Y;
+        }
+        void operator += (const ISize& other)
+        {
+            X += other.WIDTH;
+            Y += other.HEIGHT;
+        }
+        void operator -= (const ISize& other)
+        {
+            X -= other.WIDTH;
+            Y -= other.HEIGHT;
+        }
+        IPosition operator + (const ISize& other)
+        {
+            IPosition sum = *this;
+            sum += other;
+            return sum;
+        }
+        IPosition operator - (const ISize& other)
+        {
+            IPosition sub = *this;;
+            sub -= other;
+            return sub;
+        }
     };
 
     struct IRectangle
@@ -47,6 +134,54 @@ namespace AMLEngine
         int GetWidth()  const { return BOTTOM_RIGHT.X - TOP_LEFT.X; }
      
         int GetHeight() const { return BOTTOM_RIGHT.Y - TOP_LEFT.Y; }
+
+        ISize GetSize() const
+        {
+            ISize size;
+
+            size.WIDTH  = GetWidth();
+            size.HEIGHT = GetHeight();
+
+            return size;
+        }
+
+        void operator+=(const IPosition& topLeft)
+        {
+            ISize size   = GetSize();
+            TOP_LEFT     = topLeft;
+            BOTTOM_RIGHT += size;
+        }
+
+        void operator -= (const IPosition& bottomRight)
+        {
+            ISize size = GetSize();
+            BOTTOM_RIGHT = bottomRight;
+            TOP_LEFT -= size;
+        }
+
+        bool Intersect(const IRectangle& rect) const
+        {
+           //rect1_min < rect2_MAX && rect2_min < rect1_max 
+            return (TOP_LEFT.X < rect.TOP_LEFT.X + rect.GetWidth())
+                &&
+                (rect.TOP_LEFT.X < TOP_LEFT.X + GetWidth())
+                &&
+                (TOP_LEFT.Y < rect.TOP_LEFT.Y + rect.GetHeight())
+                &&
+                (rect.TOP_LEFT.Y < TOP_LEFT.Y + GetHeight());
+        }
+
+        void Set(const AMLEngine::IPosition& centerPos,const AMLEngine::ISize& size)
+        {
+            TOP_LEFT      = centerPos;
+            BOTTOM_RIGHT  = centerPos;
+
+            AMLEngine::ISize halfSize = size;
+            halfSize /= 2;
+
+            TOP_LEFT     -= halfSize;
+            BOTTOM_RIGHT += halfSize;
+        }
     };
 
     struct FPosition3
@@ -78,6 +213,41 @@ namespace AMLEngine
         static const FColor3 BLUE = { 0,0,1 };
 
     }
+
+    namespace Randoms
+    {
+        static void Init()
+        {
+            std::srand(time(NULL));
+        }
+
+        static AMLEngine::IPosition GetRandomPosFrom0(int endX,int endY)
+        {
+            AMLEngine::IPosition randomPos;
+
+            randomPos.X = 0 + (std::rand() % (endX - 0 + 1));
+            randomPos.Y = 0 + (std::rand() % (endY - 0 + 1));
+
+            return randomPos;
+        }
+
+        static int GetRandomNum(int start, int end)
+        { 
+            int randNum = start + (std::rand() % (end - start + 1)); 
+            return randNum;
+        }
+
+        static AMLEngine::IPosition GetRandomPosFrom(int startX,int endX,int startY, int endY)
+        {
+            AMLEngine::IPosition randomPos;
+         
+            randomPos.X = startX + (std::rand() % (endX - startX + 1));
+            randomPos.Y = startY + (std::rand() % (endY - startY + 1));
+
+            return randomPos;
+        }
+    }
+
     namespace Resources
     {
         class TransparencyInfoLoader
@@ -963,31 +1133,31 @@ namespace AMLEngine
             return m_durationFrameLoop;
         }
 
-        void setClearColor(AMLEngine::Colors::FColor3 color)
+        void setClearColor(AMLEngine::Colors::FColor3 color) const
         {
             // Set the clear color to black
             glClearColor((GLfloat)color.r, (GLfloat)color.g ,(GLfloat)color.b, 0.0);
 
         }
-        void enableTexturing()
+        void enableTexturing() const
         {
             // Enable 2D texturing
             glEnable(GL_TEXTURE_2D);
           
         }
-        void disableTexturing()
+        void disableTexturing() const
         {
             
             glDisable(GL_TEXTURE_2D);
 
         }
-        void enableShadeModeSmooth()
+        void enableShadeModeSmooth() const
         {
 
             glShadeModel(GL_SMOOTH);
           
         }
-        void enableShadeModeFlat()
+        void enableShadeModeFlat() const
         {
            
             glShadeModel(GL_FLAT);
@@ -1013,16 +1183,18 @@ namespace AMLEngine
             ALWAYS = GL_ALWAYS
         };
 
-        void enableAlphaTest(ALPHA_FUN eALPHA_FUN,float value = 0.0f)
+        void enableAlphaTest(ALPHA_FUN eALPHA_FUN,float value = 0.0f) const
         {
             glEnable(GL_ALPHA_TEST);
             glAlphaFunc(static_cast<GLenum>(eALPHA_FUN), value);
         }
-        void disableAlphaTest()
+
+        void disableAlphaTest() const
         {
             glDisable(GL_ALPHA_TEST);
            
         }
+
         void run()
         {
             //precondition

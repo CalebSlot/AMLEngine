@@ -50,7 +50,7 @@ public:
         const Snake<BrainSnake1>::SnakeState currentState = snake.m_eState;
 
         Snake<BrainSnake1>::SnakeState nextState = Snake<BrainSnake1>::SnakeState::THINKING;
-
+        int num_moves = 0;
 
         switch (currentState)
         {
@@ -72,32 +72,40 @@ public:
         break;
         case Snake<BrainSnake1>::SnakeState::MOVING:
         {
+    
+            AMLEngine::IPosition newPosition  = snake.m_oIPosSnake;
+            AMLEngine::IPosition nextPosition = snake.m_oIPosSnake;
 
-            AMLEngine::IPosition newPosition = snake.m_oIPosSnake;
             if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::RIGHT)
             {
                 newPosition.X += side;
+                nextPosition.X += 2*side;
             }
             else
                 if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::LEFT)
                 {
                     newPosition.X -= side;
+                    nextPosition.X -= 2 * side;
                 }
                 else
                     if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::UP)
                     {
                         newPosition.Y -= side;
+                        nextPosition.Y -= 2 * side;
                     }
                     else
                         if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::DOWN)
                         {
                             newPosition.Y += side;
+                            nextPosition.Y += 2 * side;
                         }
 
+           
             snake.m_oIPosSnakePrev = snake.m_oIPosSnake;
-            snake.m_oIPosSnake = newPosition;
+            snake.m_oIPosSnake     = newPosition;
+            snake.m_oIPosSnakeForw = nextPosition;
 
-            //collision on boundig box
+            //point collision on boundig box (considering the bounding box at 0 plus wall)
             if ((newPosition.X <= side || newPosition.X >= size.WIDTH - side) || (newPosition.Y <= side || newPosition.Y >= size.HEIGHT - side))
             {
                 return Snake<BrainSnake1>::SnakeState::COLLIDED_AREA;
@@ -121,11 +129,32 @@ public:
         case Snake<BrainSnake1>::SnakeState::COLLIDED_BODY:
         {
             //reset positions
-            snake.m_oIPosSnake = snake.m_oIPosSnakePrev;
+            snake.m_oIPosSnakeForw = snake.m_oIPosSnake;
+            snake.m_oIPosSnake     = snake.m_oIPosSnakePrev;
+
+        }
+        break;
+        case Snake<BrainSnake1>::SnakeState::EATING_FRUIT:
+        {
+            nextState = Snake<BrainSnake1>::SnakeState::GROWING_1;
+        }
+        break;
+        case Snake<BrainSnake1>::SnakeState::GROWING_1:
+        {
+            snake.m_iLenSnake++;
+            snake.m_oIPosSnakePrev = snake.m_oIPosSnake;
+            snake.m_oIPosSnake     = snake.m_oIPosSnakeForw;
+            nextState = Snake<BrainSnake1>::SnakeState::GROWED;
+        }
+        break;
+        case Snake<BrainSnake1>::SnakeState::GROWED:
+        {
+            snake.m_vIPosSnake[snake.m_iLenSnake - 1] = snake.m_oIPosSnake;
         }
         break;
         case Snake<BrainSnake1>::SnakeState::MOVED:
         {
+           
             //update positions
             const size_t len = snake.m_iLenSnake;
             AMLEngine::IPosition* positions = &snake.m_vIPosSnake[0];
@@ -136,6 +165,8 @@ public:
             }
 
             positions[len - 1] = snake.m_oIPosSnake;
+
+      
         }
         break;
         }
