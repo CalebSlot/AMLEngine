@@ -41,7 +41,7 @@ public:
     }
 
     //FSM here
-    static Snake<BrainSnake1>::SnakeState Update(Snake<BrainSnake1>& snake, Snake<BrainSnake1>::SnakeState previousState)
+    static Snake<BrainSnake1>::SnakeState Update(Snake<BrainSnake1>& snake, Snake<BrainSnake1>::SnakeState previousState,float deltaTime)
     {
 
         AMLEngine::IRectangle rect = snake.m_moveArea;
@@ -52,7 +52,7 @@ public:
 
         Snake<BrainSnake1>::SnakeState nextState = Snake<BrainSnake1>::SnakeState::THINKING;
         int num_moves = 0;
-
+       
         switch (currentState)
         {
         case Snake<BrainSnake1>::SnakeState::HOME:
@@ -77,28 +77,31 @@ public:
             AMLEngine::IPosition newPosition  = snake.m_oIPosSnake;
             AMLEngine::IPosition nextPosition = snake.m_oIPosSnake;
 
+           
             if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::RIGHT)
             {
-                newPosition.X += side + snake.m_iSideGrowth;
-                nextPosition.X += 2*side + snake.m_iSideGrowth;
+
+
+                newPosition.X += side;
+                nextPosition.X += 2 * side;
             }
             else
                 if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::LEFT)
                 {
-                    newPosition.X -= (side + snake.m_iSideGrowth);
-                    nextPosition.X -= (2 * (side + snake.m_iSideGrowth));
+                    newPosition.X -= side;
+                    nextPosition.X -= 2 *side ;
                 }
                 else
                     if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::UP)
                     {
-                        newPosition.Y -= (side + snake.m_iSideGrowth);
-                        nextPosition.Y -= (2 * (side + snake.m_iSideGrowth));
+                        newPosition.Y -= side;
+                        nextPosition.Y -= 2 * side;
                     }
                     else
                         if (m_eDirectionSnake == Snake<BrainSnake1>::Opcode::DOWN)
                         {
-                            newPosition.Y += side + snake.m_iSideGrowth;
-                            nextPosition.Y += 2 * side + snake.m_iSideGrowth;
+                            newPosition.Y += side;
+                            nextPosition.Y += 2 * side;
                         }
 
            
@@ -142,7 +145,7 @@ public:
         break;
         case Snake<BrainSnake1>::SnakeState::GROWING_1:
         {
-            snake.m_iLenSnake++;
+            snake.m_iLenSnake+=1;
             snake.m_oIPosSnakePrev = snake.m_oIPosSnake;
             snake.m_oIPosSnake     = snake.m_oIPosSnakeForw;
             nextState = Snake<BrainSnake1>::SnakeState::GROWED;
@@ -166,7 +169,7 @@ public:
             //update positions
             const size_t len = snake.m_iLenSnake;
             AMLEngine::IPosition* positions = &snake.m_vIPosSnake[0];
-
+       
             for (int i = 0;i < len - 1;i++)
             {
                 positions[i] = positions[i + 1];

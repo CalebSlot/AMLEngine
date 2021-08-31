@@ -182,7 +182,7 @@ protected:
     void OnCollisionFruitEnter()
     {
         m_oSnake->SetState(Snake<BrainSnake1>::SnakeState::EATING_FRUIT);
-        m_oSnake->Update();
+       // m_oSnake->Update();
 
         m_bRenderFruitSpawned = false;
         m_bRenderFruitEated = true;
