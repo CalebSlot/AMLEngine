@@ -51,8 +51,8 @@ private:
     SnakeState m_eState;
     SnakeState m_eStatePrev;
     float m_fElapsed;
-    float m_fSpeed_Snake;
-
+    float m_fUpdateAITime;
+    int m_iSideGrowth;
     AMLEngine::IPosition m_oIPosSnake;
     AMLEngine::IPosition m_oIPosSnakePrev;
     AMLEngine::IPosition m_oIPosSnakeForw;
@@ -60,7 +60,7 @@ private:
 
     AMLEngine::Colors::FColor3 m_oColorSnake;
     int m_iLenSnake;
-    AMLEngine::ISize m_moveArea;
+    AMLEngine::IRectangle m_moveArea;
 
 public:
 
@@ -73,13 +73,13 @@ public:
         m_eStatePrev = m_eState;
         m_eState     = state;
     }
-    Snake(AMLEngine::IPosition startPosition,AMLEngine::ISize moveArea,AMLEngine::Colors::FColor3 snakeColor,size_t startLen) : m_eDirectionSnake(Opcode::NONE)
+    Snake(AMLEngine::IPosition startPosition,AMLEngine::IRectangle moveArea,AMLEngine::Colors::FColor3 snakeColor,size_t startLen) : m_eDirectionSnake(Opcode::NONE)
     {
         m_eState     = SnakeState::HOME;
         m_eStatePrev = m_eState;
-
+        m_iSideGrowth = 0;
         m_fElapsed = 0.0f;
-        m_fSpeed_Snake = 0.15f;
+        m_fUpdateAITime = 0.15f;
         m_oIPosSnake  = startPosition;
         m_oIPosSnakePrev = startPosition;
         m_oColorSnake = snakeColor;
@@ -92,7 +92,7 @@ public:
         }
     }
 
-    void UpdateMoveArea(AMLEngine::ISize moveArea)
+    void UpdateMoveArea(AMLEngine::IRectangle moveArea)
     {
         m_moveArea = moveArea;
     }
@@ -119,7 +119,7 @@ public:
     {
         m_fElapsed += deltaTime;
        
-        if (m_fElapsed >= m_fSpeed_Snake)
+        if (m_fElapsed >= m_fUpdateAITime)
         {
             Update();
 
@@ -134,10 +134,43 @@ public:
 
     AMLEngine::ISize GetHeadSize() const
     {
-        int side = m_moveArea.HEIGHT / 64;
+        int side = m_moveArea.GetHeight() / 64;
         return { side ,side };
     }
-    const AMLEngine::ISize& GetMoveArea() const
+
+    AMLEngine::IRectangle GetBoundingBox()
+    {
+
+        AMLEngine::IPosition topLeft     = m_oIPosSnake;
+        AMLEngine::IPosition bottomRight = m_oIPosSnake;
+
+        for (int i = 0;i < m_iLenSnake;i++)
+        {
+            if (m_vIPosSnake[i].X < topLeft.X)
+            {
+                topLeft.X = m_vIPosSnake[i].X;
+            }
+            if (m_vIPosSnake[i].Y < topLeft.Y)
+            {
+                topLeft.Y = m_vIPosSnake[i].Y;
+            }
+            if (m_vIPosSnake[i].X > bottomRight.X)
+            {
+                bottomRight.X = m_vIPosSnake[i].X;
+            }
+            if (m_vIPosSnake[i].Y > bottomRight.Y)
+            {
+                bottomRight.Y = m_vIPosSnake[i].Y;
+            }
+        }
+        int side = m_moveArea.GetHeight() / 64;
+        int halfSide = side / 2;
+        topLeft     -= halfSide;
+        bottomRight += halfSide;
+        return { topLeft,bottomRight};
+    }
+
+    const AMLEngine::IRectangle& GetMoveArea() const
     {
         return m_moveArea;
     }
@@ -146,11 +179,9 @@ public:
         return m_oIPosSnake;
     }
 
-    void Render()
+    void Render(float deltaTime)
     {
-        
-
-        int side = m_moveArea.HEIGHT / 64;
+        int side = m_moveArea.GetHeight() / 64;
 
         for (int i = 0;i < m_iLenSnake;i++)
         {

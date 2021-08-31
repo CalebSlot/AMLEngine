@@ -74,9 +74,11 @@ private:
 
     AMLEngine::Core::KeyboardInputHandlerPtr currentInputHandler;
     AMLEngine::Core::RenderHandlerPtr currentRenderHandler;
+    AMLEngine::Core::UpdateHandlerPtr currentUpdateHandler;
 
     AMLEngine::Core::KeyboardInputHandlerPtr v_i[MAX_SCENES];
     AMLEngine::Core::RenderHandlerPtr        v_r[MAX_SCENES];
+
     typedef std::function<void(AMLEngine::Core&)> CreatePtr;
     CreatePtr v_c[MAX_SCENES];
     SceneTypeID        v_s[MAX_SCENES];
@@ -107,8 +109,9 @@ public:
 
 
         ame.setInputHandler(std::bind(&Demos::processInputScenes, this, _1));
+        ame.setUpdateHandler(std::bind(&Demos::updateHandlerScenes, this, _1));
         ame.setRenderLoop(std::bind(&Demos::renderLoopScenes, this, _1));
-
+      
 
         num_scenes = 3;
         v_s[0] = 3;
@@ -178,13 +181,13 @@ private:
 
         if (next == 3)
         {
-            ame.setUpdateHandler(std::bind(&AMLEngine::Core::Scene<SnakeScene>::update, &m_oSnakeScene,_1));
+            currentUpdateHandler = std::bind(&AMLEngine::Core::Scene<SnakeScene>::update, &m_oSnakeScene,_1);
         }
         else
         {
-            ame.setUpdateHandler([](float deltaTime) {
+            currentUpdateHandler = [](AMLEngine::Core&) {
 
-            });
+            };
         }
 
         return next;
@@ -412,6 +415,12 @@ private:
         Input(keyboard);
         
         currentInputHandler(keyboard);
+    }
+
+
+    void updateHandlerScenes(AMLEngine::Core& ame)
+    {
+        currentUpdateHandler(ame);
     }
 
     void renderLoopScenes(AMLEngine::Core& ame)

@@ -77,6 +77,8 @@ namespace AMLEngine
             isize.HEIGHT = HEIGHT * size;
             return isize;
         }
+
+       
     };
 
     struct IPosition
@@ -84,6 +86,7 @@ namespace AMLEngine
         int X;
         int Y;
 
+      
         bool operator == (const IPosition& other) const
         {
             if (&other == this)
@@ -101,6 +104,16 @@ namespace AMLEngine
 
             X = other.X;
             Y = other.Y;
+        }
+        void operator += (int size)
+        {
+            X += size;
+            Y += size;
+        }
+        void operator -= (int size)
+        {
+            X -= size;
+            Y -= size;
         }
         void operator += (const ISize& other)
         {
@@ -134,6 +147,15 @@ namespace AMLEngine
         int GetWidth()  const { return BOTTOM_RIGHT.X - TOP_LEFT.X; }
      
         int GetHeight() const { return BOTTOM_RIGHT.Y - TOP_LEFT.Y; }
+
+        IPosition GetCenter()
+        {
+            ISize     s = GetSize();
+            IPosition c = TOP_LEFT;
+            c.X += s.WIDTH /  2;
+            c.Y += s.HEIGHT / 2;
+            return c;
+        }
 
         ISize GetSize() const
         {
@@ -214,39 +236,7 @@ namespace AMLEngine
 
     }
 
-    namespace Randoms
-    {
-        static void Init()
-        {
-            std::srand(time(NULL));
-        }
-
-        static AMLEngine::IPosition GetRandomPosFrom0(int endX,int endY)
-        {
-            AMLEngine::IPosition randomPos;
-
-            randomPos.X = 0 + (std::rand() % (endX - 0 + 1));
-            randomPos.Y = 0 + (std::rand() % (endY - 0 + 1));
-
-            return randomPos;
-        }
-
-        static int GetRandomNum(int start, int end)
-        { 
-            int randNum = start + (std::rand() % (end - start + 1)); 
-            return randNum;
-        }
-
-        static AMLEngine::IPosition GetRandomPosFrom(int startX,int endX,int startY, int endY)
-        {
-            AMLEngine::IPosition randomPos;
-         
-            randomPos.X = startX + (std::rand() % (endX - startX + 1));
-            randomPos.Y = startY + (std::rand() % (endY - startY + 1));
-
-            return randomPos;
-        }
-    }
+    
 
 
     namespace Memory
@@ -420,6 +410,124 @@ namespace AMLEngine
         };
     }
 
+#ifdef DEBUG
+
+
+
+    void DebugRandoms(IRectangle subs[4]);
+
+#endif // DEBUG
+
+    namespace Randoms
+    {
+
+
+
+        class SimpleRandom
+        {
+
+        public:
+            class Seed
+            {
+            private:
+                Seed()
+                {
+
+                }
+
+            public:
+
+                static void Update()
+                {
+                    srand(time(NULL));
+                }
+
+            };
+            static AMLEngine::IPosition GetRandomPosFrom0(int endX, int endY)
+            {
+                AMLEngine::IPosition randomPos;
+
+                randomPos.X = 0 + (std::rand() % (endX - 0 + 1));
+                randomPos.Y = 0 + (std::rand() % (endY - 0 + 1));
+
+                return randomPos;
+            }
+
+            static int GetRandomNum(int start, int end)
+            {
+                int randNum = start + (std::rand() % (end - start + 1));
+                return randNum;
+            }
+
+            static AMLEngine::IPosition GetRandomPosFrom(int startX, int endX, int startY, int endY)
+            {
+                AMLEngine::IPosition randomPos;
+
+                if (endX - startX < 2 || endY - startY < 0)
+                {
+                    return { 0,0};
+                }
+
+                randomPos.X = startX + (std::rand() % (endX - startX + 1));
+                randomPos.Y = startY + (std::rand() % (endY - startY + 1));
+
+                return randomPos;
+            }
+
+            static AMLEngine::IPosition GetRandomPosInRectExtrudePosByOffset(const AMLEngine::IRectangle& mainArea, const AMLEngine::IPosition& pos, const AMLEngine::ISize offset)
+            {
+
+                int startX(0), endX(0), startY(0), endY(0);
+
+
+                AMLEngine::IRectangle subs[4] = { mainArea,mainArea,mainArea,mainArea };
+                AMLEngine::IRectangle* validSubs[4];
+
+                int valids = 0;
+                
+                subs[0].BOTTOM_RIGHT = { pos.X - offset.WIDTH,mainArea.BOTTOM_RIGHT.Y };
+               
+                subs[1].TOP_LEFT = { pos.X + offset.WIDTH,mainArea.TOP_LEFT.Y };
+
+                subs[2].TOP_LEFT = { pos.X - offset.WIDTH, mainArea.TOP_LEFT.Y };
+                subs[2].BOTTOM_RIGHT = { pos.X + offset.WIDTH, pos.Y - offset.HEIGHT };
+
+                subs[3].TOP_LEFT = { pos.X - offset.WIDTH, pos.Y + offset.HEIGHT };
+                subs[3].BOTTOM_RIGHT = { pos.X + offset.WIDTH,mainArea.BOTTOM_RIGHT.Y };
+
+
+                for (int i = 0;i < 4;i++)
+                {
+                    if (!(subs[i].BOTTOM_RIGHT.X - subs[i].TOP_LEFT.X < offset.WIDTH) && !(subs[i].BOTTOM_RIGHT.Y - subs[i].TOP_LEFT.Y < offset.HEIGHT))
+                    {
+                        validSubs[valids++] = &subs[i];
+                    }
+                }
+
+                int randomAreaIndex = -1;
+                AMLEngine::IRectangle* rA = &const_cast<IRectangle&>(mainArea);
+
+                if (valids == 1)
+                {
+                    rA = validSubs[0];
+                }
+                if (valids > 1)
+                {
+                    randomAreaIndex = AMLEngine::Randoms::SimpleRandom::GetRandomNum(0, valids - 1);
+                    rA = validSubs[randomAreaIndex];
+                }
+
+                startX = rA->TOP_LEFT.X;
+                endX   = rA->BOTTOM_RIGHT.X;
+                startY = rA->TOP_LEFT.Y;
+                endY   = rA->BOTTOM_RIGHT.Y;
+
+                AMLEngine::IPosition newPos = AMLEngine::Randoms::SimpleRandom::GetRandomPosFrom(startX, endX, startY, endY);
+
+                return newPos;
+            }
+        };
+    }
 
     class Core
     {
@@ -445,9 +553,9 @@ namespace AMLEngine
             {
                 this->OnRender(oCore);
             }
-            void update(float deltaTime)
+            void update(AMLEngine::Core& oCore)
             {
-                this->OnUpdate(deltaTime);
+                this->OnUpdate(oCore);
             }
             void input(const AMLEngine::Core::Keyboard& oKeyboard)
             {
@@ -494,7 +602,7 @@ namespace AMLEngine
 
         typedef std::function<void(const Keyboard&)> KeyboardInputHandlerPtr;
         typedef std::function<void(Core&)> RenderHandlerPtr;
-        typedef std::function<void(float)> UpdateHandlerPtr;
+        typedef std::function<void(Core&)> UpdateHandlerPtr;
 
        // typedef void (*KeyboardInputHandlerPtr)(const Keyboard&);
        // typedef void (*RenderHandlerPtr)(Core&);
@@ -573,8 +681,8 @@ namespace AMLEngine
         const unsigned int SCR_WIDTH = 800;
         const unsigned int SCR_HEIGHT = 600;
         const char * c_title = "OpenGLTestBed";
-        const float FPS_60 = 1.0f / 60.0f;
-        const float FPS_30 = 1.0f / 30.0f;
+        const double FPS_60 = 1.0 / 60.0;
+        const double FPS_30 = 1.0 / 30.0;
         bool isInit = false;
 
         GLFWwindowPtr window;
@@ -691,7 +799,7 @@ namespace AMLEngine
         {
 
         }
-        void updateFallback()
+        void updateFallback(AMLEngine::Core& core)
         {
 
         }
@@ -1138,6 +1246,17 @@ namespace AMLEngine
                     glVertex2f(x + halfSide, y- halfSide);
                 glEnd();
             }
+            static void Rectangle(int x1, int y1, int x2, int y2, const AMLEngine::Colors::FColor3& color = AMLEngine::Colors::FColor3{ 1,1,1 })
+            {
+       
+                glColor3f(color.r, color.g, color.b);
+                glBegin(GL_QUADS);
+                glVertex2f(x1, y1);
+                glVertex2f(x2, y1);
+                glVertex2f(x2, y2);
+                glVertex2f(x1, y2);
+                glEnd();
+            }
             static void Circle(int x, int y, size_t radius, const AMLEngine::Colors::FColor3& color = AMLEngine::Colors::FColor3{ 1,1,1 })
             {
                 float theta;
@@ -1202,6 +1321,9 @@ namespace AMLEngine
             }
 
         };
+
+
+
         const Keyboard& getKeyboard() const
         {
             return *(&keyboard);
@@ -1346,23 +1468,21 @@ namespace AMLEngine
             }
             if (!updateHandlerPtr)
             {
-                updateHandlerPtr = [](const float deltaTime) {
+                updateHandlerPtr = [](Core&) {
 
                 };
             }
 
             //TODO: add fixed pipe or shader
              setupOrtho(SCR_WIDTH,SCR_HEIGHT);
-            //main loop
-
-
-            //TODO:: add different paths on different configurations (different whiless.)
-            //DOING
-            //FREE PFS
-
-            float counter = 0.0f;
-            float fixedDt = FPS_60;
            
+
+
+            
+             AMLEngine::Randoms::SimpleRandom::Seed::Update();
+            
+
+        
             if (m_eRenderLimit == FrameLimit::NONE)
             {
                 auto m_BeginFrame = std::chrono::high_resolution_clock::now();
@@ -1370,33 +1490,24 @@ namespace AMLEngine
               
                 while (!glfwWindowShouldClose(window))
                 {
-                    m_EndFrame          = std::chrono::high_resolution_clock::now();
-                    m_durationMainLoop  = m_EndFrame - m_BeginFrame;
-                    m_durationFrameLoop = m_durationMainLoop.count();
-                    m_BeginFrame        = m_EndFrame;
+                   
+                    m_BeginFrame = std::chrono::high_resolution_clock::now();
 
-                    counter += m_durationFrameLoop;
+                    m_durationMainLoop  = m_EndFrame - m_BeginFrame;
+
+                    m_durationFrameLoop = m_durationMainLoop.count();
+
+                   
 
                     glfwPollEvents();
                     // input
                     // -----
                     inputHandlerPtr(keyboard);
 
-
-                    //update
-                    size_t steps = 0;
-                    while (counter >= fixedDt)
-                    {
-                        m_integrationStep = counter / fixedDt;
-                        updateHandlerPtr(m_integrationStep);
-
-                        counter -= fixedDt;
-                        steps++;
-                    }
+                    updateHandlerPtr(*this);
 
                     // render
                     // ------
-                   
                     glClear(GL_COLOR_BUFFER_BIT);
 
                     renderHandlerPtr(*this);
@@ -1404,7 +1515,7 @@ namespace AMLEngine
                     // -------------------------------------------------------------------------------
                     glfwSwapBuffers(window);
                  
-
+                    m_EndFrame = m_BeginFrame;
                  
                 }
             }
@@ -1424,23 +1535,22 @@ namespace AMLEngine
                     break;
                 }
 
-                fixedDt = renderLimit / 4;
-
-                auto m_BeginTime     = std::chrono::high_resolution_clock::now();
-                auto m_EndTime       = m_BeginTime;
-                auto m_LastFrameTime = m_BeginTime;
+               
+                double counter = 0.0;
              
-
+                auto m_BeginFrame    = std::chrono::high_resolution_clock::now();
+                auto m_EndFrame      = m_BeginFrame;
+                auto m_LastFrameTime = m_BeginFrame;
+             
                 while (!glfwWindowShouldClose(window))
                 {
-                    m_EndTime                               = std::chrono::high_resolution_clock::now();
-                    m_durationMainLoop                      = m_EndTime - m_BeginTime;
-                    std::chrono::duration<float> renderTime = m_EndTime - m_LastFrameTime;
+                    m_BeginFrame = std::chrono::high_resolution_clock::now();
+                    m_durationMainLoop                      = m_BeginFrame - m_EndFrame;
+                    m_durationFrameLoop                     = m_durationMainLoop.count();
+                    m_EndFrame                              = m_BeginFrame;
 
-                    m_durationFrameLoop                     = renderTime.count();
-                    m_BeginTime = m_EndTime;
 
-                    counter += m_durationMainLoop.count();
+                    counter += m_durationFrameLoop;
 
 
                     glfwPollEvents();
@@ -1450,33 +1560,30 @@ namespace AMLEngine
 
                     //update
                     size_t steps = 0;
-                    while (counter >= fixedDt)
+                    while (counter >= renderLimit)
                     {
+#ifdef DEBUG
+                    //    std::cout << "ENGINE UPDATE " << steps << "\n";
+#endif // DEBUG
+                        updateHandlerPtr(*this);
 
-                        m_integrationStep = counter / renderLimit;
-                        updateHandlerPtr(m_integrationStep);
-
-                        counter -= fixedDt;
+                        counter -= renderLimit;
                         steps++;
-
                     }
 
+#ifdef DEBUG
+                  //  std::cout << "ENGINE RENDER " <<"\n";
+#endif // DEBUG
                     //render
-
                     glClear(GL_COLOR_BUFFER_BIT);
+                    
+                    m_integrationStep = counter / renderLimit;
+                    renderHandlerPtr(*this);
 
-                    if (m_durationFrameLoop >= renderLimit)
-                    {
-                       
-                        renderHandlerPtr(*this);
-                        //glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-                        // -------------------------------------------------------------------------------
-                        glfwSwapBuffers(window);
-                        m_LastFrameTime = std::chrono::high_resolution_clock::now();
-                    }
+                    //glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+                    // -------------------------------------------------------------------------------
+                    glfwSwapBuffers(window);
 
-                   
-                 
                 }
             }
         }
@@ -1516,5 +1623,6 @@ namespace AMLEngine
             glfwTerminate();
         }
     };
+
 
 }

@@ -16,60 +16,69 @@ private:
     AMLEngine::Core::Draw::ImagePtr fruit;
 
     AMLEngine::ISize fruitSize;
+    AMLEngine::ISize halfFruit;
     AMLEngine::IPosition fruitPos;
     AMLEngine::IPosition fruitImgPos;
     AMLEngine::IRectangle m_oSnakeCollider;
     AMLEngine::IRectangle m_oFruitCollider;
 
-    void RenderSnake()
+    void RenderSnake(const AMLEngine::Core& core)
     {
-        m_oSnake->Render();
+        m_oSnake->Render(core.getIntegrationTime());
     }
 
     void RenderWalls()
     {
 
     }
-
+    bool m_bRenderFruitEated, m_bRenderFruitSpawned;
     void RenderFruit(const AMLEngine::Core& core,const AMLEngine::IPosition& pos)
     {
 
-        AMLEngine::IPosition posS = m_oSnake->GetHeadPosition();
-        posS.X = posS.X - fruitPos.X;
-        posS.Y = posS.Y - fruitPos.Y;
-        posS.X /= 2;
-        posS.Y /= 2;
 
-        if (m_collisionFruitStay || m_collisionFruitExit)
+        if (m_bRenderFruitEated)
         {
             AMLEngine::Core::Draw::Circle(fruitPos.X, fruitPos.Y,fruitSize.WIDTH/2,AMLEngine::Colors::GREEN);
-            
             return;
         }
+
+        if (m_bRenderFruitSpawned)
+        {
             core.enableTexturing();
             core.enableShadeModeSmooth();
             core.enableAlphaTest(AMLEngine::Core::ALPHA_FUN::GREATER, 0.0f);
             fruit->BlitImage(pos.X, pos.Y);
             core.enableShadeModeFlat();
             core.disableAlphaTest();
-        
+            return;
+        }
     }
 
 protected:
 
     void OnCreate(AMLEngine::Core& core)
     {
+
+        //LOAD RESOURCES (NOW ONLY TRANSPARENCY DATAS)
+        AMLEngine::Resources::TransparencyInfoLoader trans(transparency_file);
+
+
+        //SNAKE OBJECT POS / RENDER / COLLISION SETUP
         AMLEngine::IPosition startPosition    = core.getWindowCenter();
         AMLEngine::ISize moveArea             = core.getWindowSize();
+
+        AMLEngine::IRectangle rectArea;
+        rectArea.Set(startPosition, moveArea);
+
         AMLEngine::Colors::FColor3 snakeColor = AMLEngine::Colors::GREEN;
         size_t startLen                       = 3;
 
-        m_oSnake = std::make_unique<Snake<BrainSnake1>>(startPosition, moveArea, snakeColor, startLen);
+        m_oSnake = std::make_unique<Snake<BrainSnake1>>(startPosition, rectArea, snakeColor, startLen);
       
         UpdateDynamicColliders();
 
-        AMLEngine::Resources::TransparencyInfoLoader trans(transparency_file);
-       
+
+        //FRUIT OBJECT POS / RENDER / COLLISION SETUP
         fruit    = AMLEngine::Core::Draw::Image::CreateImage(apple_file);
         //set white color to be full transparent (set thr color.alpha channel to 1.0)
         
@@ -77,29 +86,33 @@ protected:
         if (tEntry == nullptr)
         {
             std::cout << " canno't load " << apple_file << " informations";
+            fruitSize.WIDTH  = 20;
+            fruitSize.HEIGHT = 20;
         }
         else
         {
             fruit->GetTextureHandle().SetColorKey(tEntry->color);
+            fruitSize.WIDTH = static_cast<int>(fruit->GetTextureHandle().GetWidth());
+            fruitSize.HEIGHT = static_cast<int>(fruit->GetTextureHandle().GetHeight());
         }
-
-        fruitSize.WIDTH  = static_cast<int>(fruit->GetTextureHandle().GetWidth());
-        fruitSize.HEIGHT = static_cast<int>(fruit->GetTextureHandle().GetHeight());
-
-        AMLEngine::Randoms::Init();
+       
+        halfFruit = fruitSize / 2;
 
         AMLEngine::IRectangle rect;
-        moveArea -= 40;
+        moveArea -= halfFruit;
         rect.Set(startPosition, moveArea);
       
-        fruitPos = GetRandomPosOutsidePos(rect, startPosition, fruitSize);
-        fruitImgPos = fruitPos - fruitSize / 2;
+        fruitPos              = AMLEngine::Randoms::SimpleRandom::GetRandomPosInRectExtrudePosByOffset(rect, startPosition, fruitSize);
+        fruitImgPos           = fruitPos - halfFruit;
+        m_bRenderFruitEated   = false;
+        m_bRenderFruitSpawned = true;
 
         UpdateStaticColliders();
 
+        //TICK
         m_oTimer.GetTime();
 
-        //light brown
+        //BACKGROUNDlight brown
         core.setClearColor(AMLEngine::Colors::FColor3{138/255.0f,102/255.0f,56/255.0f});
 
     }
@@ -107,37 +120,33 @@ protected:
     void OnRender(AMLEngine::Core& core)
     {
 
-        std::cout << core.getFrameTime() << "\n";
+        std::cout << "render FrameTime" << core.getFrameTime() << " IntegrationStep" << core.getIntegrationTime() <<"\n";
 
-        AMLEngine::ISize moveArea = core.getWindowSize();
-
-        //update the bounding area.. only cause i know is not fixed.. usually should be
-        m_oSnake->UpdateMoveArea(moveArea);
-
-        //update snake behaviours
-        //brain1 will stop the movements of the snake if against walls or body part
-        m_oSnake->Update(m_oTimer.GetTime());
-        
-        UpdateDynamicColliders();
 
        
         //Render Colliders
 #ifdef DEBUG
+
+        AMLEngine::Core::Draw::Rectangle(m_oSnake->GetBoundingBox().TOP_LEFT.X -5, m_oSnake->GetBoundingBox().TOP_LEFT.Y -5, m_oSnake->GetBoundingBox().BOTTOM_RIGHT.X + 5, m_oSnake->GetBoundingBox().BOTTOM_RIGHT.Y +5, AMLEngine::Colors::RED);
+
+        AMLEngine::IPosition pF = m_oFruitCollider.GetCenter();
+        AMLEngine::IPosition pS = m_oSnakeCollider.GetCenter();
       //  AMLEngine::Core::Draw::Square(fruitPos.X, fruitPos.Y, m_oFruitCollider.GetWidth(), AMLEngine::Colors::BLUE);
-        AMLEngine::Core::Draw::Circle(fruitPos.X, fruitPos.Y, m_oFruitCollider.GetWidth() /2, AMLEngine::Colors::BLUE);
-        AMLEngine::Core::Draw::Square(m_oSnake->GetHeadPosition().X, m_oSnake->GetHeadPosition().Y, m_oSnake->GetHeadSize().WIDTH + 2, AMLEngine::Colors::BLUE);
+        AMLEngine::Core::Draw::Circle(pF.X, pF.Y, m_oFruitCollider.GetWidth() /2, AMLEngine::Colors::BLUE);
+        AMLEngine::Core::Draw::Square(pS.X, pS.Y, m_oSnakeCollider.GetWidth() + 5, AMLEngine::Colors::BLUE);
+    
 #endif
         //render images
         RenderFruit(core, fruitImgPos);
 
         //render the snake
-        RenderSnake();
+        RenderSnake(core);
 
-
-        //Render Colliders
-        // 
+        AMLEngine::ISize moveArea = core.getWindowSize();
+        int side = moveArea.HEIGHT / 64;
+        
         //RENDER OBSTACLES
-        int side      = moveArea.HEIGHT / 64;
+
         int hside     = side / 2;
         int numBlocks = moveArea.HEIGHT / side + 6;
 
@@ -160,39 +169,6 @@ protected:
 
     }
 
-    //spawn system
-    AMLEngine::IPosition GetRandomPosOutsidePos(const AMLEngine::IRectangle& mainArea,const AMLEngine::IPosition& pos, const AMLEngine::ISize offset)
-    {
-
-        int startX(0),endX(0),startY(0),endY(0);
-
-       
-        AMLEngine::IRectangle subs[4] = {mainArea,mainArea,mainArea,mainArea };
-
-
-
-        subs[0].BOTTOM_RIGHT     = {pos.X - offset.WIDTH,mainArea.BOTTOM_RIGHT.Y};
-      
-        subs[1].TOP_LEFT         = {pos.X + offset.WIDTH,mainArea.BOTTOM_RIGHT.Y };
-       
-        subs[2].TOP_LEFT         = {pos.X - offset.WIDTH, mainArea.TOP_LEFT.Y };
-        subs[2].BOTTOM_RIGHT     = {pos.X + offset.WIDTH, pos.Y - offset.HEIGHT};
-            
-        subs[3].TOP_LEFT         = {pos.X - offset.WIDTH, pos.Y + offset.HEIGHT};
-        subs[3].BOTTOM_RIGHT     = {pos.X + offset.WIDTH,mainArea.BOTTOM_RIGHT.Y};
-
-        int randomAreaIndex       = AMLEngine::Randoms::GetRandomNum(0,3);
-        AMLEngine::IRectangle* rA = &subs[randomAreaIndex];
-
-        startX = rA->TOP_LEFT.X;
-        endX   = rA->BOTTOM_RIGHT.X;
-        startY = rA->TOP_LEFT.Y;
-        endY   = rA->BOTTOM_RIGHT.Y;
-
-        AMLEngine::IPosition newPos = AMLEngine::Randoms::GetRandomPosFrom(startX, endX, startY, endY);
-      
-        return newPos;
-    }
 
     void UpdateStaticColliders()
     {
@@ -207,38 +183,69 @@ protected:
     {
         m_oSnake->SetState(Snake<BrainSnake1>::SnakeState::EATING_FRUIT);
         m_oSnake->Update();
+
+        m_bRenderFruitSpawned = false;
+        m_bRenderFruitEated = true;
     }
 
     void OnCollisionFruitStay()
     {
-
+        m_bRenderFruitSpawned = false;
+        m_bRenderFruitEated   = true;
     }
 
     void OnCollisionFruitExit()
     {
         
-        AMLEngine::ISize moveArea = m_oSnake->GetMoveArea();
-        AMLEngine::IPosition pos;
-        pos.X = moveArea.WIDTH / 2;
-        pos.Y = moveArea.HEIGHT / 2;
-        moveArea -= 40;
-        AMLEngine::IRectangle rect;
-        rect.Set(pos, moveArea);
-        fruitPos = GetRandomPosOutsidePos(rect, m_oSnake->GetHeadPosition(), m_oSnake->GetHeadSize());
-        fruitImgPos = fruitPos - fruitSize / 2;
+        AMLEngine::ISize     size     = m_oSnake->GetBoundingBox().GetSize();
+
+        AMLEngine::IRectangle movArea = m_oSnake->GetMoveArea();
+        movArea.TOP_LEFT.X     += fruitSize.WIDTH;
+        movArea.TOP_LEFT.Y     += fruitSize.HEIGHT;
+        movArea.BOTTOM_RIGHT.X -= fruitSize.WIDTH;
+        movArea.BOTTOM_RIGHT.Y -= fruitSize.HEIGHT;
+
+        
+        do
+        {
+            fruitPos = AMLEngine::Randoms::SimpleRandom::GetRandomPosInRectExtrudePosByOffset(movArea, m_oSnake->GetHeadPosition(), size);
+
+        } while (fruitPos.X < movArea.TOP_LEFT.X || fruitPos.Y < movArea.TOP_LEFT.Y || fruitPos.X > movArea.BOTTOM_RIGHT.X || fruitPos.Y > movArea.BOTTOM_RIGHT.Y);
+
+        fruitImgPos = fruitPos - halfFruit;
 
         UpdateStaticColliders();
+
+        m_bRenderFruitSpawned = true;
+        m_bRenderFruitEated   = false;
     }
 
 
     bool m_collisionFruitEnter = false;
     bool m_collisionFruitStay  = false;
-    bool m_collisionFruitExit  = false;
     //Fixded step update
-    void OnUpdate(float deltaTime)
+    void OnUpdate(AMLEngine::Core& core)
     {
-        
-        std::cout << " integration step : " << deltaTime << "\n";
+
+        float sceneTime = m_oTimer.GetTime();
+        std::cout << "update  SceneTime " << sceneTime << "\n";
+
+        AMLEngine::ISize moveArea = core.getWindowSize();
+        int side = moveArea.HEIGHT / 64;
+        int wallSide = side;
+
+        moveArea -= wallSide;
+        AMLEngine::IRectangle moveRect;
+        moveRect.Set(core.getWindowCenter(), moveArea);
+        //update the bounding area.. only cause i know is not fixed.. usually should be
+        m_oSnake->UpdateMoveArea(moveRect);
+
+        //update snake behaviours
+        //brain1 will stop the movements of the snake if against walls or body part
+        m_oSnake->Update(sceneTime);
+
+        UpdateDynamicColliders();
+
 
          if (m_oSnakeCollider.Intersect(m_oFruitCollider))
          {
@@ -254,21 +261,16 @@ protected:
                  OnCollisionFruitStay();
              }
          }
-         else
+        
+
+         if (m_collisionFruitStay == true || m_collisionFruitEnter == true)
          {
-             if (m_collisionFruitExit == true)
-             {
-                 m_collisionFruitExit = false;
-             }
-             else
-             if (m_collisionFruitStay == true)
-             {
-                 m_collisionFruitExit = true;
-                 m_collisionFruitStay = false;
+                 m_collisionFruitEnter = false;
+                 m_collisionFruitStay  = false;
                  OnCollisionFruitExit();
-             }
-           
          }
+           
+         
 
     }
 
