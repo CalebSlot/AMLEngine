@@ -97,38 +97,10 @@ public:
         m_moveArea = moveArea;
     }
   
-    void UpdateAI(float deltaTime)
-    {
-        SnakeState previousState = m_eState;
-        SnakeState nextState = m_eState;
-
-        //TODO: move int brain
-        do
-        {
-            nextState = Brain::Update(*this, previousState,deltaTime);
-
-            previousState = m_eState;
-
-            m_eState = nextState;
-        } while
-            (nextState != SnakeState::THINKING);
-
-        m_eStatePrev = previousState;
-    }
 
     void Update(float deltaTime)
     {
-        m_fElapsed += deltaTime;
-       
-        //TODO: move n the brain
-        if (m_fElapsed >= m_fUpdateAITime)
-        {
-            for (int fastStep = 0;fastStep < m_iSideGrowth + 1;fastStep++)
-            {
-                UpdateAI(deltaTime);
-            }
-            m_fElapsed = 0.0f;
-        }
+        Brain::Update(*this, deltaTime);
     }
    
     void Input(const Command& directions)
