@@ -15,8 +15,115 @@
 
 namespace AMLEngine
 {
+    struct fVector3
+    {
+        float x;
+        float y;
+        float z;
+
+        
 
 
+    };
+
+    struct fVector2
+    {
+        float X;
+        float Y;
+        void operator += (const fVector2& other)
+        {
+            
+            X += other.X;
+            Y += other.Y;
+        }
+        void operator -= (const fVector2& other)
+        {
+
+            X -= other.X;
+            Y -= other.Y;
+        }
+        fVector2 operator + (const fVector2& other) const
+        {
+            fVector2 newVector;
+            newVector = *this;
+            newVector += other;
+            return newVector;
+        }
+        fVector2 operator - (const fVector2& other) const
+        {
+            fVector2 newVector;
+            newVector = *this;
+            newVector -= other;
+            return newVector;
+        }
+        fVector2 operator + (const fVector2& other) const
+        {
+            fVector2 newVector;
+            newVector = *this;
+            newVector += other;
+            return newVector;
+        }
+        void operator - (const fVector2& other) 
+        {
+         
+            *this -= other;
+           
+        }
+        void operator + (const fVector2& other)
+        {
+
+            *this += other;
+
+        }
+        void operator *= (float value)
+        {
+
+            X *= value;
+            Y *= value;
+
+        }
+
+        fVector2 operator * (float value) const
+        {
+            fVector2 result = *this;
+            result *= value;
+            return result;
+            
+        }
+        void operator /= (float value)
+        {
+
+            X /= value;
+            Y /= value;
+
+        }
+
+        fVector2 operator / (float value) const
+        {
+            fVector2 result = *this;
+            result /= value;
+            return result;
+
+        }
+        float operator * (const fVector2& other) const
+        {
+            return X * other.X + Y * other.Y;
+        }
+        float Magn() const
+        {
+            return std::sqrtf(std::pow(X,2)+std::pow(Y,2));
+        }
+        float Magn2() const
+        {
+            return std::pow(X, 2) + std::pow(Y, 2);
+        }
+        void Norm()
+        {
+            float magn = Magn();
+            *this /= magn;
+        }
+
+    };
     struct ISize
     {
         int WIDTH;
