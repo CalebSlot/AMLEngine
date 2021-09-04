@@ -27,7 +27,7 @@ namespace AMLEngine
     };
 
 
-
+  
     struct fVector2
     {
         float X;
@@ -696,6 +696,7 @@ namespace AMLEngine
 
             void create(AMLEngine::Core& oCore)
             {
+              
                 this->OnCreate(oCore);
             }
             void render(AMLEngine::Core& oCore)
@@ -900,6 +901,13 @@ namespace AMLEngine
 
             keyboard.setWindow(window);
 
+
+            //init stuffs!
+            AMLEngine::Randoms::SimpleRandom::Seed::Update();
+            AMLEngine::Core::Draw::TextureManager::GetInstance();
+            AMLEngine::Core::Draw::TextureManager::GetTextureAllocator();
+
+
             return true;
         }
 
@@ -986,14 +994,20 @@ namespace AMLEngine
 
         struct Draw
         {
-           
+            friend class Core;
             class Texture;
             class TextureHandle;
             
+
+
         private:
+
+
             class TextureManager
             {
+     
                 friend class TextureHandle;
+     
             private:
                 
                 std::hash<std::string> hasher;
@@ -1625,12 +1639,6 @@ namespace AMLEngine
             //TODO: add fixed pipe or shader
              setupOrtho(SCR_WIDTH,SCR_HEIGHT);
            
-
-
-            
-             AMLEngine::Randoms::SimpleRandom::Seed::Update();
-            
-
         
             if (m_eRenderLimit == FrameLimit::NONE)
             {
