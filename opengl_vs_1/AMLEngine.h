@@ -237,7 +237,10 @@ namespace AMLEngine
     }
 
     
+    namespace Rotations
+    {
 
+    }
 
     namespace Memory
     {   
