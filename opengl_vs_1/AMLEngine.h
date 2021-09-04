@@ -65,13 +65,7 @@ namespace AMLEngine
             newVector -= other;
             return newVector;
         }
-        fVector2 operator + (const fVector2& other) const
-        {
-            fVector2 newVector;
-            newVector = *this;
-            newVector += other;
-            return newVector;
-        }
+     
         void operator - (const fVector2& other) 
         {
          
