@@ -26,10 +26,19 @@ namespace AMLEngine
 
     };
 
+
+
     struct fVector2
     {
         float X;
         float Y;
+
+
+        fVector2() : X(0.0f), Y(0.0f)
+        {
+
+        }
+
         void operator += (const fVector2& other)
         {
             
@@ -124,6 +133,42 @@ namespace AMLEngine
         }
 
     };
+
+
+    struct fV2Matrix2
+    {
+        fVector2 c_1;
+        fVector2 c_2;
+
+        fVector2 operator * (const fVector2& other) const
+        {
+            fVector2 result;
+            result.X = c_1.X * other.X + c_2.X * other.Y;
+            return result;
+        }
+
+        static fV2Matrix2 Rot (float rAngle)
+        {
+            fV2Matrix2 rot;
+            rot.c_1.X = std::cosf(rAngle);
+            rot.c_1.Y = std::sinf(rAngle);
+            rot.c_2.X = -rot.c_1.Y;
+            rot.c_2.Y = rot.c_1.X;
+            return rot;
+        }
+
+        static fVector2 Rotate(const fVector2& other,float rAngle)
+        {
+            fV2Matrix2 rot = Rot(rAngle);
+            return rot * other;
+        }
+        static fVector2 Rotate(fVector2& other, float rAngle)
+        {
+            fV2Matrix2 rot = Rot(rAngle);
+            other = rot * other;
+        }
+    };
+
     struct ISize
     {
         int WIDTH;
