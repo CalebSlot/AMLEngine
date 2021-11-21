@@ -541,13 +541,14 @@ namespace AMLEngine
 
             }
 
-            TEntry* Get(const std::string& search)
+            const AMLEngine::Resources::TransparencyInfoLoader::TEntry * const Get(const std::string& search) const
             {
 
                 for (int i = 0;i < len;i++)
                 {
                     if (entries[i]->name == search)
                     {
+                      
                         return entries[i];
                     }
                 }

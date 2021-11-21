@@ -82,7 +82,7 @@ protected:
         fruit    = AMLEngine::Core::Draw::Image::CreateImage(apple_file);
         //set white color to be full transparent (set thr color.alpha channel to 1.0)
         
-        AMLEngine::Resources::TransparencyInfoLoader::TEntry* tEntry = trans.Get(apple_file);
+        const AMLEngine::Resources::TransparencyInfoLoader::TEntry * tEntry = trans.Get(apple_file);
         if (tEntry == nullptr)
         {
             std::cout << " canno't load " << apple_file << " informations";
